@@ -1,7 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models.dart';
 
@@ -22,20 +21,13 @@ class PersistedState {
 }
 
 class StorageService {
-  static const _fileName = 'schedify_data.json';
-
-  Future<File> _file() async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/$_fileName');
-  }
+  static const _storageKey = 'schedify_data';
 
   Future<PersistedState?> load() async {
     try {
-      final file = await _file();
-      if (!await file.exists()) return null;
-
-      final content = await file.readAsString();
-      if (content.trim().isEmpty) return null;
+      final prefs = await SharedPreferences.getInstance();
+      final content = prefs.getString(_storageKey);
+      if (content == null || content.trim().isEmpty) return null;
 
       final json = jsonDecode(content) as Map<String, dynamic>;
 
@@ -77,7 +69,7 @@ class StorageService {
       },
     };
 
-    final file = await _file();
-    await file.writeAsString(jsonEncode(json));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storageKey, jsonEncode(json));
   }
 }
