@@ -107,8 +107,26 @@ class _HomeShellState extends State<HomeShell> {
             Navigator.of(context).pop();
             await _openAddClientScreen(existing: client);
           },
+          onDelete: () {
+            Navigator.of(context).pop();
+            _deleteClient(client);
+          },
         ),
       ),
+    );
+  }
+
+  void _deleteClient(Client client) {
+    final labels = getLabels(client.activityType, _language);
+    setState(() {
+      _clients.removeWhere((c) => c.id == client.id);
+      _sessionsByClient.remove(client.id);
+    });
+    _bumpSessionsTick();
+    _persist();
+
+    rootScaffoldMessengerKey.currentState!.showSnackBar(
+      SnackBar(content: Text(s.clientDeletedSnackbar(labels.clientSingular, client.name))),
     );
   }
 

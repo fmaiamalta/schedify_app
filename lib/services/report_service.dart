@@ -67,13 +67,13 @@ Future<bool> sendViaWhatsApp(String phone, String message) async {
 }
 
 Future<bool> sendViaEmail(String email, String subject, String message) async {
-  final uri = Uri(
-    scheme: 'mailto',
-    path: email,
-    queryParameters: {
-      'subject': subject,
-      'body': message,
-    },
+  // Uri(...queryParameters: {...}) codifica espaços como "+" (estilo
+  // application/x-www-form-urlencoded); um mailto: precisa de codificação
+  // percentual (RFC 6068) — caso contrário, muitos clientes de email mostram
+  // o "+" literal em vez de espaço no assunto/corpo. Uri.encodeComponent usa
+  // %20, por isso constrói-se a query manualmente.
+  final uri = Uri.parse(
+    'mailto:$email?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(message)}',
   );
   if (await canLaunchUrl(uri)) {
     return launchUrl(uri);

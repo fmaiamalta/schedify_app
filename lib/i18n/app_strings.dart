@@ -172,6 +172,17 @@ class AppStrings {
   String editNoun(String noun) => _t('Editar $noun', 'Edit $noun');
   String get edit => _t('Editar', 'Edit');
   String get save => _t('Guardar', 'Save');
+
+  // Eliminar aluno/cliente (Ficha do aluno) e estado "inativo" (Alunos/Disciplina)
+  String deleteClientAction(String clientSingularLower) => _t('Eliminar $clientSingularLower', 'Delete $clientSingularLower');
+  String confirmDeleteClientTitle(String clientSingularLower) => _t('Eliminar $clientSingularLower?', 'Delete $clientSingularLower?');
+  String confirmDeleteClientBody(String name) => _t(
+        'Todo o histórico de sessões e pagamentos de $name é eliminado permanentemente. Esta ação não pode ser desfeita.',
+        'All session and payment history for $name is permanently deleted. This action cannot be undone.',
+      );
+  String clientDeletedSnackbar(String clientSingular, String name) =>
+      _t('$clientSingular $name eliminado.', '$clientSingular $name deleted.');
+  String get inactiveBadgeLabel => _t('Inativo', 'Inactive');
   String infoSection(String noun) => _t('Informações do $noun', 'Information for $noun');
   String sessionConfigSection(String sessionSingularLower, {bool masculine = false}) =>
       _t('Configuração ${masculine ? 'do' : 'da'} $sessionSingularLower', 'Configuration of $sessionSingularLower');

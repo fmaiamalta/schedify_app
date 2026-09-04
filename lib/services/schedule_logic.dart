@@ -251,6 +251,23 @@ List<ResolvedOccurrence> generateResolvedOccurrencesInRange(
   return result;
 }
 
+/// Um cliente está "ativo" se tiver pelo menos uma ocorrência agendada hoje
+/// ou nos próximos 60 dias (já com reagendamentos/cancelamentos aplicados) —
+/// cobre tanto um "Avulso" cuja única data já passou como um horário com
+/// data de fim já ultrapassada. Um cliente sem horário fixo (padrão
+/// recorrente sem data de fim) nunca fica inativo por esta via. Usado para
+/// deixar de contar para "alunos inscritos" em Disciplina e para assinalar
+/// "Inativo" em Alunos — o registo do cliente nunca é apagado só por isto,
+/// já que pode voltar a ter aulas agendadas mais tarde.
+bool clientHasUpcomingSchedule(Client client, DateTime now) {
+  final today = dateOnly(now);
+  return generateResolvedOccurrencesInRange(
+    client,
+    rangeStart: today,
+    rangeEnd: addCalendarDays(today, 60),
+  ).isNotEmpty;
+}
+
 /// Gera todas as ocorrências (data+hora) de um cliente entre `rangeStart` e
 /// `rangeEnd` (inclusive), já com exceções pontuais aplicadas — usado sempre
 /// que só interessa a data+hora efetiva, não a distinção original/nova (ex.:

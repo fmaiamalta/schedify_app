@@ -69,41 +69,44 @@ class DashboardTab extends StatelessWidget {
             const SizedBox(height: 24),
             SectionTitle(title: s.quickActions),
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: QuickActionCard(
-                    icon: Icons.person_add_alt_1_outlined,
-                    label: s.newLabel(labels.clientSingular),
-                    iconColor: AppColors.brandBlue,
-                    textColor: AppColors.brandBlue,
-                    background: AppColors.brandBlueSoft,
-                    onTap: onAddClient,
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: QuickActionCard(
+                      icon: Icons.person_add_alt_1_outlined,
+                      label: s.newLabel(labels.clientSingular),
+                      iconColor: AppColors.brandBlue,
+                      textColor: AppColors.brandBlue,
+                      background: AppColors.brandBlueSoft,
+                      onTap: onAddClient,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: QuickActionCard(
-                    icon: Icons.check_circle_outline,
-                    label: s.registerLabel(labels.sessionSingular),
-                    iconColor: AppColors.brandGreen,
-                    textColor: AppColors.brandGreen,
-                    background: AppColors.brandGreenSoft,
-                    onTap: () => _openRegisterScreen(context, s),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: QuickActionCard(
+                      icon: Icons.check_circle_outline,
+                      label: s.registerLabel(labels.sessionSingular),
+                      iconColor: AppColors.brandGreen,
+                      textColor: AppColors.brandGreen,
+                      background: AppColors.brandGreenSoft,
+                      onTap: () => _openRegisterScreen(context, s),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: QuickActionCard(
-                    icon: Icons.calendar_month_outlined,
-                    label: s.schedule,
-                    iconColor: AppColors.neutralMedium,
-                    textColor: AppColors.neutralMedium,
-                    background: AppColors.surfaceSoft,
-                    onTap: onOpenSchedule,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: QuickActionCard(
+                      icon: Icons.calendar_month_outlined,
+                      label: s.schedule,
+                      iconColor: AppColors.neutralMedium,
+                      textColor: AppColors.neutralMedium,
+                      background: AppColors.surfaceSoft,
+                      onTap: onOpenSchedule,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 28),
             SectionTitle(title: s.upcomingThisWeek(labels.sessionPlural)),

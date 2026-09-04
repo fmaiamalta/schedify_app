@@ -10,6 +10,7 @@ class ClientDetailScreen extends StatelessWidget {
   final AppLanguage language;
   final List<SessionRecord> sessions;
   final Future<void> Function() onEdit;
+  final VoidCallback onDelete;
 
   const ClientDetailScreen({
     super.key,
@@ -18,7 +19,28 @@ class ClientDetailScreen extends StatelessWidget {
     required this.language,
     required this.sessions,
     required this.onEdit,
+    required this.onDelete,
   });
+
+  Future<void> _confirmDelete(BuildContext context, ActivityLabels labels, AppStrings s) async {
+    final singularLower = labels.clientSingular.toLowerCase();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s.confirmDeleteClientTitle(singularLower)),
+        content: Text(s.confirmDeleteClientBody(client.name)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(s.cancel)),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(s.confirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) onDelete();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +63,11 @@ class ClientDetailScreen extends StatelessWidget {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            onPressed: () => _confirmDelete(context, labels, s),
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            tooltip: s.deleteClientAction(labels.clientSingular.toLowerCase()),
+          ),
           TextButton.icon(
             onPressed: onEdit,
             icon: const Icon(Icons.edit_outlined, color: AppColors.brandBlue),

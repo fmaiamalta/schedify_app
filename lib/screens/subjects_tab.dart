@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../i18n/app_strings.dart';
 import '../models.dart';
+import '../services/schedule_logic.dart';
 import '../theme.dart';
 import '../widgets/shared_widgets.dart';
 
@@ -13,9 +14,13 @@ class _SubjectSummary {
   ActivityType get activityType => clients.first.activityType;
 }
 
-List<_SubjectSummary> _groupByName(List<Client> clients) {
+/// Só conta clientes ativos (ver [clientHasUpcomingSchedule]): uma
+/// disciplina cujo último aluno terminou o horário deixa de aparecer aqui,
+/// mesmo que o registo do aluno continue a existir em Alunos.
+List<_SubjectSummary> _groupByName(List<Client> clients, DateTime now) {
   final byName = <String, List<Client>>{};
   for (final client in clients) {
+    if (!clientHasUpcomingSchedule(client, now)) continue;
     final name = client.serviceType.trim();
     if (name.isEmpty) continue;
     byName.putIfAbsent(name, () => []).add(client);
@@ -59,7 +64,8 @@ class _SubjectsTabState extends State<SubjectsTab> {
 
     // Nesta atividade: lista simples, já todas do mesmo tipo, por ordem alfabética.
     // Todos: agrupadas por atividade (ordem das Definições) e, dentro de cada uma, por ordem alfabética.
-    final subjects = _showAll ? _groupByName(widget.allClients) : _groupByName(widget.clients);
+    final now = DateTime.now();
+    final subjects = _showAll ? _groupByName(widget.allClients, now) : _groupByName(widget.clients, now);
 
     final totalCount = subjects.length;
     final title = _showAll ? s.allActivitiesTitle : labels.serviceTypeLabel;

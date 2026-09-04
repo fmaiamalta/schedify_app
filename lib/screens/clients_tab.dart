@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../i18n/app_strings.dart';
 import '../models.dart';
+import '../services/schedule_logic.dart';
 import '../theme.dart';
 import '../widgets/shared_widgets.dart';
 
@@ -93,11 +94,13 @@ class _ClientsTabState extends State<ClientsTab> {
                       itemBuilder: (context, index) {
                         final client = displayed[index];
                         final subtitle = client.serviceType.trim().isNotEmpty ? client.serviceType : client.contactEmail;
+                        final isActive = clientHasUpcomingSchedule(client, DateTime.now());
                         return ClientCard(
                           name: client.name,
                           subtitle: subtitle,
                           onTap: () => widget.onOpenClient(client),
                           accentColor: colorForActivityType(client.activityType),
+                          badgeLabel: isActive ? null : s.inactiveBadgeLabel,
                         );
                       },
                     ),

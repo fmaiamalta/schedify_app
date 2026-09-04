@@ -6,6 +6,14 @@ import '../services/schedule_logic.dart';
 import '../theme.dart';
 import '../widgets/shared_widgets.dart';
 
+/// Só a primeira letra (não title case) — usado em Nome/Disciplina/Notas ao
+/// guardar, para que o registo fique arrumado mesmo que o utilizador tenha
+/// escrito tudo em minúsculas.
+String _capitalizeFirstLetter(String value) {
+  if (value.isEmpty) return value;
+  return value[0].toUpperCase() + value.substring(1);
+}
+
 class AddClientScreen extends StatefulWidget {
   final ActivityType activityType;
   final AppLanguage language;
@@ -525,11 +533,11 @@ class _AddClientScreenState extends State<AddClientScreen> {
       id:
           widget.existingClient?.id ??
           DateTime.now().microsecondsSinceEpoch.toString(),
-      name: _nameController.text.trim(),
-      serviceType: _serviceTypeController.text.trim(),
+      name: _capitalizeFirstLetter(_nameController.text.trim()),
+      serviceType: _capitalizeFirstLetter(_serviceTypeController.text.trim()),
       contactEmail: _emailController.text.trim(),
       contactPhone: _phoneController.text.trim(),
-      notes: _notesController.text.trim(),
+      notes: _capitalizeFirstLetter(_notesController.text.trim()),
       sessionDurationMinutes: _sessionDurationMinutes,
       sessionFrequency: _sessionFrequency,
       slots: slots,
@@ -570,12 +578,20 @@ class _AddClientScreenState extends State<AddClientScreen> {
           elevation: 0,
           surfaceTintColor: AppColors.surface,
           leading: TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+            ),
             onPressed: () => _hasUnsavedChanges()
                 ? _confirmDiscardAndPop()
                 : _popFromAppButton(),
-            child: Text(s.cancel, style: const TextStyle(fontSize: 16)),
+            child: Text(
+              s.cancel,
+              softWrap: false,
+              overflow: TextOverflow.visible,
+              style: const TextStyle(fontSize: 16),
+            ),
           ),
-          leadingWidth: 100,
+          leadingWidth: 110,
           title: Text(
             _isEditing
                 ? s.editNoun(shortCompoundLabel(labels.clientSingular))

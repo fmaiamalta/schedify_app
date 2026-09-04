@@ -140,7 +140,7 @@ class QuickActionCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
       child: Container(
-        height: 140,
+        constraints: const BoxConstraints(minHeight: 140),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
         decoration: BoxDecoration(
           color: background,
@@ -274,8 +274,16 @@ class ClientCard extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
   final Color? accentColor;
+  final String? badgeLabel;
 
-  const ClientCard({super.key, required this.name, required this.subtitle, required this.onTap, this.accentColor});
+  const ClientCard({
+    super.key,
+    required this.name,
+    required this.subtitle,
+    required this.onTap,
+    this.accentColor,
+    this.badgeLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -305,13 +313,30 @@ class ClientCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.neutralDark,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.neutralDark,
+                          ),
+                        ),
+                      ),
+                      if (badgeLabel != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: AppColors.surfaceSoft, borderRadius: BorderRadius.circular(10)),
+                          child: Text(
+                            badgeLabel!,
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.neutralMedium),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   if (subtitle.isNotEmpty) ...[
                     const SizedBox(height: 4),
