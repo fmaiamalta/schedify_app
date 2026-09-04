@@ -898,21 +898,27 @@ class _AddClientScreenState extends State<AddClientScreen> {
                               ),
                             ),
                             const SizedBox(width: 10),
-                            SegmentedButton<RateType>(
-                              segments: [
-                                ButtonSegment(
-                                  value: RateType.perHour,
-                                  label: Text(s.perHourOption),
+                            Flexible(
+                              child: SegmentedButton<RateType>(
+                                segments: [
+                                  ButtonSegment(
+                                    value: RateType.perHour,
+                                    label: Text(s.perHourOption),
+                                  ),
+                                  ButtonSegment(
+                                    value: RateType.total,
+                                    label: Text(s.totalOption),
+                                  ),
+                                ],
+                                selected: {_rateType},
+                                showSelectedIcon: false,
+                                style: const ButtonStyle(
+                                  visualDensity: VisualDensity.compact,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
-                                ButtonSegment(
-                                  value: RateType.total,
-                                  label: Text(s.totalOption),
-                                ),
-                              ],
-                              selected: {_rateType},
-                              showSelectedIcon: false,
-                              onSelectionChanged: (selection) =>
-                                  setState(() => _rateType = selection.first),
+                                onSelectionChanged: (selection) =>
+                                    setState(() => _rateType = selection.first),
+                              ),
                             ),
                           ],
                         ),
