@@ -102,6 +102,18 @@ void main() {
       final client = _avulsoClient(date: DateTime(2026, 6, 10, 18, 0));
       expect(clientHasUpcomingSchedule(client, now), isFalse);
     });
+
+    test('data única é hoje mas a hora já passou (ex.: registada e paga de manhã): inativo', () {
+      // now = 2026-06-15 10:00; a sessão de hoje era às 08:00, já aconteceu.
+      final client = _avulsoClient(date: DateTime(2026, 6, 15, 8, 0));
+      expect(clientHasUpcomingSchedule(client, now), isFalse);
+    });
+
+    test('data única é hoje e a hora ainda não chegou: ativo', () {
+      // now = 2026-06-15 10:00; a sessão de hoje é só às 18:00.
+      final client = _avulsoClient(date: DateTime(2026, 6, 15, 18, 0));
+      expect(clientHasUpcomingSchedule(client, now), isTrue);
+    });
   });
 
   group('clientHasUpcomingSchedule — overrides pontuais', () {
