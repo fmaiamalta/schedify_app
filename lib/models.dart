@@ -21,6 +21,18 @@ final ValueNotifier<AppLanguage> currentAppLanguage = ValueNotifier(AppLanguage.
 
 Locale localeFor(AppLanguage language) => Locale(language == AppLanguage.en ? 'en' : 'pt');
 
+/// Chave estável do ScaffoldMessenger de toda a app, passada a
+/// `MaterialApp(scaffoldMessengerKey: ...)`. Um SnackBar mostrado via
+/// `ScaffoldMessenger.of(context)` fica "preso" ao Scaffold da rota
+/// atualmente visível quando foi chamado; se essa rota for depois fechada
+/// (ex.: voltar atrás a partir do ecrã Registar) antes do temporizador de 4s
+/// terminar, o SnackBar pode ficar permanentemente visível, sem nunca
+/// desaparecer, em vez de ser transferido corretamente para outra rota.
+/// Mostrar sempre através desta chave em vez de `ScaffoldMessenger.of(context)`
+/// evita o problema, porque o messenger deixa de estar ligado a um Scaffold de
+/// rota específica.
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 /// Frequência de pagamento (ciclo de acumulação/relatório em Pagamentos).
 enum PaymentType {
   avulso,

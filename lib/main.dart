@@ -32,6 +32,7 @@ class SchedifyApp extends StatelessWidget {
       builder: (context, language, _) {
         return MaterialApp(
           title: 'Schedify',
+          scaffoldMessengerKey: rootScaffoldMessengerKey,
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             scaffoldBackgroundColor: const Color(0xFFF7F8FA),

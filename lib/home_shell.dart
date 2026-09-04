@@ -176,7 +176,7 @@ class _HomeShellState extends State<HomeShell> {
     _bumpSessionsTick();
     _persist();
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    rootScaffoldMessengerKey.currentState!.showSnackBar(
       SnackBar(
         content: Text(s.registeredSnackbar(labels.sessionSingular, client.name, masculine: labels.sessionIsMasculine)),
         action: SnackBarAction(label: s.undo, onPressed: () => _removeSession(client.id, session.id)),
@@ -206,7 +206,7 @@ class _HomeShellState extends State<HomeShell> {
     _bumpSessionsTick();
     _persist();
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    rootScaffoldMessengerKey.currentState!.showSnackBar(
       SnackBar(content: Text(s.paymentMarkedPaidSnackbar(group.client.name, group.periodLabel(_language)))),
     );
   }
