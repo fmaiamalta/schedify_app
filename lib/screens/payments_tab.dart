@@ -6,10 +6,11 @@ import '../services/schedule_logic.dart';
 import '../theme.dart';
 import '../widgets/shared_widgets.dart';
 
-class PaymentsTab extends StatelessWidget {
+class PaymentsTab extends StatefulWidget {
   final ActivityType activityType;
   final AppLanguage language;
   final List<Client> clients;
+  final List<Client> allClients;
   final Map<String, List<SessionRecord>> sessionsByClient;
   final ValueChanged<Client> onOpenClient;
   final ValueChanged<PaymentCycleGroup> onMarkGroupPaid;
@@ -21,6 +22,7 @@ class PaymentsTab extends StatelessWidget {
     required this.activityType,
     required this.language,
     required this.clients,
+    required this.allClients,
     required this.sessionsByClient,
     required this.onOpenClient,
     required this.onMarkGroupPaid,
@@ -28,10 +30,24 @@ class PaymentsTab extends StatelessWidget {
     required this.onOpenSettings,
   });
 
-  List<PaymentCycleGroup> _allGroups() {
+  @override
+  State<PaymentsTab> createState() => _PaymentsTabState();
+}
+
+/// Identifica um ciclo de pagamento de forma estável (cliente + ciclo), para
+/// saber se o relatório desse ciclo já foi enviado. Usa `cycleId` (não
+/// periodStart diretamente) para que dois ciclos Avulso do mesmo cliente no
+/// mesmo dia não colidam na mesma chave.
+String _groupKey(PaymentCycleGroup group) => '${group.client.id}|${group.cycleId}';
+
+class _PaymentsTabState extends State<PaymentsTab> {
+  bool _showAll = false;
+  final Set<String> _reportSentKeys = {};
+
+  List<PaymentCycleGroup> _allGroups(List<Client> clients) {
     final groups = <PaymentCycleGroup>[];
     for (final client in clients) {
-      final sessions = sessionsByClient[client.id] ?? [];
+      final sessions = widget.sessionsByClient[client.id] ?? [];
       groups.addAll(computePaymentCycles(client, sessions));
     }
     return groups;
@@ -39,10 +55,12 @@ class PaymentsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labels = getLabels(activityType, language);
-    final s = AppStrings(language);
+    final labels = getLabels(widget.activityType, widget.language);
+    final s = AppStrings(widget.language);
     final now = DateTime.now();
-    final allGroups = _allGroups();
+    final showToggle = widget.allClients.length > widget.clients.length;
+    final title = _showAll ? s.allPaymentsTitle : s.paymentsTitle;
+    final allGroups = _allGroups(_showAll ? widget.allClients : widget.clients);
 
     final pending = allGroups.where((g) => g.hasPending).toList()
       ..sort((a, b) => b.periodStart.compareTo(a.periodStart));
@@ -59,7 +77,19 @@ class PaymentsTab extends StatelessWidget {
             children: [
               const AppHeader(),
               const SizedBox(height: 6),
-              ScreenTitleRow(title: s.paymentsTitle, onOpenSettings: onOpenSettings),
+              ScreenTitleRow(title: title, onOpenSettings: widget.onOpenSettings, settingsTooltip: s.settingsTitle),
+              if (showToggle) ...[
+                const SizedBox(height: 12),
+                SegmentedButton<bool>(
+                  segments: [
+                    ButtonSegment(value: false, label: Text(s.thisActivityFilter)),
+                    ButtonSegment(value: true, label: Text(s.allEnrolledFilter)),
+                  ],
+                  selected: {_showAll},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (selection) => setState(() => _showAll = selection.first),
+                ),
+              ],
               const SizedBox(height: 16),
               TabBar(
                 labelColor: AppColors.brandBlue,
@@ -79,8 +109,10 @@ class PaymentsTab extends StatelessWidget {
                       s: s,
                       now: now,
                       emptyText: s.noPendingPayments,
-                      onOpenClient: onOpenClient,
-                      onMarkGroupPaid: onMarkGroupPaid,
+                      reportSentKeys: _reportSentKeys,
+                      onReportSent: (group) => setState(() => _reportSentKeys.add(_groupKey(group))),
+                      onOpenClient: widget.onOpenClient,
+                      onMarkGroupPaid: widget.onMarkGroupPaid,
                       onClearGroup: null,
                     ),
                     _GroupList(
@@ -89,9 +121,11 @@ class PaymentsTab extends StatelessWidget {
                       s: s,
                       now: now,
                       emptyText: s.noCompletedPayments,
-                      onOpenClient: onOpenClient,
+                      reportSentKeys: _reportSentKeys,
+                      onReportSent: (group) => setState(() => _reportSentKeys.add(_groupKey(group))),
+                      onOpenClient: widget.onOpenClient,
                       onMarkGroupPaid: null,
-                      onClearGroup: onClearGroup,
+                      onClearGroup: widget.onClearGroup,
                     ),
                   ],
                 ),
@@ -110,6 +144,8 @@ class _GroupList extends StatelessWidget {
   final AppStrings s;
   final DateTime now;
   final String emptyText;
+  final Set<String> reportSentKeys;
+  final ValueChanged<PaymentCycleGroup> onReportSent;
   final ValueChanged<Client> onOpenClient;
   final ValueChanged<PaymentCycleGroup>? onMarkGroupPaid;
   final ValueChanged<PaymentCycleGroup>? onClearGroup;
@@ -120,6 +156,8 @@ class _GroupList extends StatelessWidget {
     required this.s,
     required this.now,
     required this.emptyText,
+    required this.reportSentKeys,
+    required this.onReportSent,
     required this.onOpenClient,
     required this.onMarkGroupPaid,
     required this.onClearGroup,
@@ -220,11 +258,22 @@ class _GroupList extends StatelessWidget {
   }
 
   void _confirmMarkPaid(BuildContext context, PaymentCycleGroup group) {
+    final reportSent = reportSentKeys.contains(_groupKey(group));
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(s.confirmPaymentTitle),
-        content: Text(s.confirmPaymentBody(group.client.name, group.periodLabel(s.language))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!reportSent) ...[
+              Text(s.reportNotSentWarning, style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+            ],
+            Text(s.confirmPaymentBody(group.client.name, group.periodLabel(s.language))),
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(s.cancel)),
           FilledButton(
@@ -294,6 +343,7 @@ class _GroupList extends StatelessWidget {
                           ? null
                           : () async {
                               final sent = await sendViaWhatsApp(group.client.contactPhone, message);
+                              if (sent) onReportSent(group);
                               if (context.mounted && !sent) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text(s.whatsappOpenFailed)),
@@ -316,6 +366,7 @@ class _GroupList extends StatelessWidget {
                                 s.reportTitle(group.client.serviceType.isNotEmpty ? group.client.serviceType : group.client.name),
                                 message,
                               );
+                              if (sent) onReportSent(group);
                               if (context.mounted && !sent) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text(s.emailOpenFailed)),

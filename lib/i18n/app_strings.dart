@@ -35,14 +35,21 @@ class AppStrings {
   String get thisActivityFilter => _t('Nesta atividade', 'This activity');
   String get allEnrolledFilter => _t('Todos', 'All');
   String get allEnrolledTitle => _t('Todos os Inscritos', 'All Enrolled');
+  String get allActivitiesTitle => _t('Todas as Atividades', 'All Activities');
+  String get allPaymentsTitle => _t('Todos os Pagamentos', 'All Payments');
 
-  // Registar sessão (ecrã)
-  String registerableSubtitle(String sessionPlural) =>
-      _t('$sessionPlural de hoje ou de até 1 semana atrás, por registar.', '$sessionPlural from today or up to 1 week ago, still to register.');
+  // Registar sessão (ecrã) — esta lista mistura ocorrências de todas as
+  // atividades em uso (não só da área de trabalho atual), por isso o título
+  // e o subtítulo não podem assumir um único nome de sessão; cada item da
+  // lista mostra o nome correto (ver register_screen.dart).
+  String get registerableSubtitle => _t(
+        'O que está agendado para hoje ou até 1 semana atrás, ainda por registar.',
+        "What's scheduled for today or up to 1 week ago, still to register.",
+      );
   String get nothingToRegister => _t('Nada por registar.', 'Nothing to register.');
   String get registerButton => _t('Registar', 'Register');
-  String registeredSnackbar(String sessionSingular, String name) =>
-      _t('$sessionSingular registada para $name', '$sessionSingular registered for $name');
+  String registeredSnackbar(String sessionSingular, String name, {bool masculine = false}) =>
+      _t('$sessionSingular ${masculine ? 'registado' : 'registada'} para $name', '$sessionSingular registered for $name');
   String get undo => _t('Anular', 'Undo');
 
   // Alunos / lista de clientes
@@ -55,7 +62,8 @@ class AppStrings {
       );
 
   // Disciplinas / subjects
-  String subjectsCreated(int count) => _t('$count registadas', '$count registered');
+  String subjectsCreated(int count, {bool masculine = false}) =>
+      _t('$count ${masculine ? 'registados' : 'registadas'}', '$count registered');
   String noSubjectsYet(String serviceTypeLower, String clientSingularLower) => _t(
         'Ainda não há $serviceTypeLower criadas.\nSão criadas automaticamente ao adicionar um(a) $clientSingularLower.',
         'No $serviceTypeLower yet.\nThey are created automatically when you add a $clientSingularLower.',
@@ -80,6 +88,28 @@ class AppStrings {
     return (_en ? en : pt)[weekday] ?? '';
   }
 
+  // Reagendar/cancelar uma única ocorrência (Horário)
+  String rescheduleAction(String sessionSingularLower) => _t('Reagendar $sessionSingularLower', 'Reschedule $sessionSingularLower');
+  String cancelOccurrenceAction(String sessionSingularLower) => _t('Cancelar $sessionSingularLower', 'Cancel $sessionSingularLower');
+  String get revertOccurrenceAction => _t('Reverter ao horário normal', 'Revert to normal schedule');
+  String cancelledBadgeLabel({bool masculine = false}) => _t(masculine ? 'Cancelado' : 'Cancelada', 'Cancelled');
+  String confirmCancelOccurrenceTitle(String sessionSingularLower) =>
+      _t('Cancelar ${sessionSingularLower.trim()}?', 'Cancel $sessionSingularLower?');
+  String confirmCancelOccurrenceBody(String sessionSingularLower, String name, String dateLabel, {bool masculine = false}) => _t(
+        '${masculine ? 'Este' : 'Esta'} $sessionSingularLower de $name em $dateLabel fica ${masculine ? 'cancelado' : 'cancelada'}. '
+        'Podes reverter mais tarde.',
+        'This $sessionSingularLower for $name on $dateLabel will be cancelled. You can revert later.',
+      );
+  String occurrenceRescheduledSnackbar(String sessionSingular, String name, String newDateLabel, {bool masculine = false}) => _t(
+        '$sessionSingular de $name ${masculine ? 'movido' : 'movida'} para $newDateLabel.',
+        '$sessionSingular for $name moved to $newDateLabel.',
+      );
+  String occurrenceCancelledSnackbar(String sessionSingular, String name, {bool masculine = false}) => _t(
+        '$sessionSingular de $name ${masculine ? 'cancelado' : 'cancelada'}.',
+        '$sessionSingular for $name cancelled.',
+      );
+  String occurrenceRevertedSnackbar(String name) => _t('Horário normal reposto para $name.', 'Normal schedule restored for $name.');
+
   // Pagamentos
   String get paymentsTitle => _t('Pagamentos', 'Payments');
   String get pending => _t('Pendentes', 'Pending');
@@ -94,7 +124,15 @@ class AppStrings {
   String get confirmPaymentTitle => _t('Confirmar pagamento', 'Confirm payment');
   String confirmPaymentBody(String name, String period) =>
       _t('Marcar o pagamento de $name ($period) como efetuado?', 'Mark the payment for $name ($period) as completed?');
+  String paymentMarkedPaidSnackbar(String name, String period) =>
+      _t('Pagamento de $name ($period) marcado como efetuado.', 'Payment for $name ($period) marked as completed.');
   String get cancel => _t('Cancelar', 'Cancel');
+  String get done => _t('Concluir', 'Done');
+  String get discardChangesTitle => _t('Descartar alterações?', 'Discard changes?');
+  String get discardChangesBody =>
+      _t('Ainda não guardaste este formulário. Se saíres agora, perdes o que preencheste.',
+          'You haven\'t saved this form yet. If you leave now, what you filled in will be lost.');
+  String get discard => _t('Descartar', 'Discard');
   String get confirm => _t('Confirmar', 'Confirm');
   String get clearRecordTitle => _t('Limpar registo', 'Clear record');
   String clearRecordBody(String name, String period) => _t(
@@ -108,6 +146,10 @@ class AppStrings {
   String get email => _t('Email', 'Email');
   String get whatsappOpenFailed => _t('Não foi possível abrir o WhatsApp.', 'Could not open WhatsApp.');
   String get emailOpenFailed => _t('Não foi possível abrir o cliente de email.', 'Could not open the email client.');
+  String get reportNotSentWarning => _t(
+        'Ainda não enviaste o relatório deste período. Podes marcar como pago à mesma.',
+        'You haven\'t sent the report for this period yet. You can still mark it as paid.',
+      );
   String get globalSummary => _t('Resumo Global', 'Global summary');
 
   // Definições
@@ -131,12 +173,16 @@ class AppStrings {
   String get edit => _t('Editar', 'Edit');
   String get save => _t('Guardar', 'Save');
   String infoSection(String noun) => _t('Informações do $noun', 'Information for $noun');
-  String sessionConfigSection(String sessionSingularLower) =>
-      _t('Configuração da $sessionSingularLower', 'Configuration of $sessionSingularLower');
+  String sessionConfigSection(String sessionSingularLower, {bool masculine = false}) =>
+      _t('Configuração ${masculine ? 'do' : 'da'} $sessionSingularLower', 'Configuration of $sessionSingularLower');
   String get paymentConfigSection => _t('Configuração do pagamento', 'Payment configuration');
   String get nameLabel => _t('Nome', 'Name');
   String get emailLabel => _t('Email', 'Email');
   String get phoneLabel => _t('Telefone', 'Phone');
+  String get phoneHint => _t(
+        'Inclua o indicativo do país (ex.: +351) para o WhatsApp funcionar bem.',
+        'Include the country code (e.g. +1) for WhatsApp to work correctly.',
+      );
   String get notesLabel => _t('Notas', 'Notes');
   String newSubject(String subjectLower) => _t('Nova $subjectLower', 'New $subjectLower');
   String get startDateLabel => _t('Data de início', 'Start date');
@@ -150,8 +196,9 @@ class AppStrings {
   String get rateLabelPerHour => _t('Valor por hora (€)', 'Rate per hour (€)');
   String get rateLabelTotal => _t('Valor total (€)', 'Total value (€)');
   String get vatSwitchLabel => _t('Com IVA', 'VAT included');
-  String scheduleHint(String sessionPluralLower) => _t(
-        'A escolha da frequência reflete-se automaticamente no calendário e nas $sessionPluralLower previstas.',
+  String scheduleHint(String sessionPluralLower, {bool masculine = false}) => _t(
+        'A escolha da frequência reflete-se automaticamente no calendário e ${masculine ? 'nos' : 'nas'} '
+        '$sessionPluralLower ${masculine ? 'previstos' : 'previstas'}.',
         'The chosen frequency is automatically reflected in the calendar and planned $sessionPluralLower.',
       );
   String minutesOption(int minutes) => _t('$minutes minutos', '$minutes minutes');
@@ -186,9 +233,10 @@ class AppStrings {
   String get yes => _t('Sim', 'Yes');
   String get no => _t('Não', 'No');
   String get dash => '—';
-  String noneRecordedYet(String sessionPluralLower) => _t('Ainda não há $sessionPluralLower registadas.', 'No $sessionPluralLower recorded yet.');
+  String noneRecordedYet(String sessionPluralLower, {bool masculine = false}) =>
+      _t('Ainda não há $sessionPluralLower ${masculine ? 'registados' : 'registadas'}.', 'No $sessionPluralLower recorded yet.');
   String get minutesAbbrev => _t('min', 'min');
-  String get paid => _t('Pago', 'Paid');
+  String paidLabel({bool masculine = false}) => _t(masculine ? 'Pago' : 'Paga', 'Paid');
   String get pendingBadge => _t('Pendente', 'Pending');
 
   // Mensagem de relatório (WhatsApp / Email)
@@ -197,19 +245,21 @@ class AppStrings {
     required String sessionDatesLabel,
     required int totalSessions,
     required String totalAmountLabel,
+    required String sessionPluralLower,
+    bool masculine = false,
   }) {
     if (_en) {
       return 'Hello,\n'
           'Here is the summary for $subjectName:\n'
           'Summary: $sessionDatesLabel.\n'
-          'Total number of sessions: $totalSessions\n'
+          'Total number of $sessionPluralLower: $totalSessions\n'
           'Total to pay: $totalAmountLabel\n'
           'Best regards.';
     }
     return 'Olá,\n'
-        'Segue o resumo das aulas/formação de $subjectName:\n'
+        'Segue o resumo ${masculine ? 'dos' : 'das'} $sessionPluralLower de $subjectName:\n'
         'Resumo: $sessionDatesLabel.\n'
-        'Número total de aulas/sessões: $totalSessions\n'
+        'Número total de $sessionPluralLower: $totalSessions\n'
         'Total a pagar: $totalAmountLabel\n'
         'Cumprimentos.';
   }

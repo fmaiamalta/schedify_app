@@ -1,11 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../i18n/app_strings.dart';
 import '../theme.dart';
 
 /// Seletor de hora com scroll (horas e minutos em rodas), em vez do relógio
 /// analógico do Material [showTimePicker].
-Future<TimeOfDay?> pickTimeWheel(BuildContext context, TimeOfDay initial) async {
+Future<TimeOfDay?> pickTimeWheel(BuildContext context, TimeOfDay initial, AppStrings s) async {
   final now = DateTime.now();
   var picked = DateTime(now.year, now.month, now.day, initial.hour, initial.minute);
 
@@ -21,10 +22,10 @@ Future<TimeOfDay?> pickTimeWheel(BuildContext context, TimeOfDay initial) async 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+                TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(s.cancel)),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(TimeOfDay(hour: picked.hour, minute: picked.minute)),
-                  child: const Text('Concluir', style: TextStyle(fontWeight: FontWeight.w700)),
+                  child: Text(s.done, style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ],
             ),
@@ -70,8 +71,9 @@ class AppHeader extends StatelessWidget {
 class ScreenTitleRow extends StatelessWidget {
   final String title;
   final VoidCallback onOpenSettings;
+  final String settingsTooltip;
 
-  const ScreenTitleRow({super.key, required this.title, required this.onOpenSettings});
+  const ScreenTitleRow({super.key, required this.title, required this.onOpenSettings, required this.settingsTooltip});
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +90,7 @@ class ScreenTitleRow extends StatelessWidget {
           onPressed: onOpenSettings,
           icon: const Icon(Icons.settings_outlined),
           color: AppColors.neutralMedium,
-          tooltip: 'Definições',
+          tooltip: settingsTooltip,
         ),
       ],
     );
@@ -382,10 +384,12 @@ class DetailLine extends StatelessWidget {
   }
 }
 
-InputDecoration schedifyInputDecoration(String label) {
+InputDecoration schedifyInputDecoration(String label, {String? helperText}) {
   return InputDecoration(
     labelText: label,
     labelStyle: const TextStyle(color: AppColors.neutralSoft),
+    helperText: helperText,
+    helperMaxLines: 2,
     filled: true,
     fillColor: AppColors.surface,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -418,6 +422,7 @@ class SchedifyTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final FocusNode? focusNode;
   final Key? fieldKey;
+  final String? helperText;
 
   const SchedifyTextField({
     super.key,
@@ -430,6 +435,7 @@ class SchedifyTextField extends StatelessWidget {
     this.onChanged,
     this.focusNode,
     this.fieldKey,
+    this.helperText,
   });
 
   @override
@@ -444,7 +450,7 @@ class SchedifyTextField extends StatelessWidget {
       inputFormatters: inputFormatters,
       onChanged: onChanged,
       style: const TextStyle(fontSize: 16, color: AppColors.neutralDark),
-      decoration: schedifyInputDecoration(label),
+      decoration: schedifyInputDecoration(label, helperText: helperText),
     );
   }
 }

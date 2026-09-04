@@ -13,7 +13,6 @@ import '../theme.dart';
 /// snackbar de registo se reflita aqui de imediato, sem ser preciso sair e
 /// voltar a entrar no ecrã.
 class RegisterScreen extends StatefulWidget {
-  final ActivityLabels labels;
   final AppStrings strings;
   final ValueListenable<int> sessionsTick;
   final List<PlannedOccurrence> Function() occurrencesProvider;
@@ -21,7 +20,6 @@ class RegisterScreen extends StatefulWidget {
 
   const RegisterScreen({
     super.key,
-    required this.labels,
     required this.strings,
     required this.sessionsTick,
     required this.occurrencesProvider,
@@ -67,7 +65,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: AppColors.surface,
         surfaceTintColor: AppColors.surface,
         elevation: 0,
-        title: Text(s.registerLabel(widget.labels.sessionSingular), style: const TextStyle(color: AppColors.neutralDark, fontWeight: FontWeight.w700)),
+        title: Text(s.registerButton, style: const TextStyle(color: AppColors.neutralDark, fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -77,7 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                s.registerableSubtitle(widget.labels.sessionPlural),
+                s.registerableSubtitle,
                 style: const TextStyle(fontSize: 13, color: AppColors.neutralSoft),
               ),
               const SizedBox(height: 16),
@@ -91,6 +89,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final occurrence = pending[index];
+                          // A lista mistura ocorrências de todas as atividades em uso, por
+                          // isso o nome da sessão vem sempre do tipo de atividade do próprio
+                          // cliente, não da área de trabalho atual (ver comentário em
+                          // registerableSubtitle).
+                          final sessionNoun = getLabels(occurrence.client.activityType, s.language).sessionSingular;
                           return Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(color: AppColors.surfaceWhite, borderRadius: BorderRadius.circular(18)),
@@ -104,7 +107,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     children: [
                                       Text(occurrence.client.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                                       Text(
-                                        '${s.weekdayShort(occurrence.scheduledFor.weekday)} • ${_formatDateTime(occurrence.scheduledFor)}',
+                                        '$sessionNoun • ${s.weekdayShort(occurrence.scheduledFor.weekday)} • ${_formatDateTime(occurrence.scheduledFor)}',
                                         style: const TextStyle(fontSize: 12, color: AppColors.neutralSoft),
                                       ),
                                     ],

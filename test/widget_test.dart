@@ -6,12 +6,18 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:schedify_app/main.dart';
 
 void main() {
   testWidgets('A app arranca corretamente', (WidgetTester tester) async {
-    await tester.pumpWidget(const SchedifyApp());
+    // Sem isto, SharedPreferences.getInstance() fica bloqueado para sempre
+    // dentro de testWidgets (não usa a plataforma real nem lança erro).
+    SharedPreferences.setMockInitialValues({});
 
-    expect(find.text('Escolhe o tipo de atividade'), findsOneWidget);
+    await tester.pumpWidget(const SchedifyApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escolha o tipo de atividade'), findsOneWidget);
   });
 }

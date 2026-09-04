@@ -1,4 +1,4 @@
-package com.example.schedify_app
+package com.spiga.schedify
 
 import io.flutter.embedding.android.FlutterActivity
 

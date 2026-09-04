@@ -12,6 +12,15 @@ enum AppLanguage {
   en,
 }
 
+/// Idioma atual da app, à escala global — necessário para que widgets nativos
+/// (ex.: showDatePicker) sigam o idioma escolhido nas Definições, já que esse
+/// idioma é um conceito próprio da app (AppLanguage), não a "Locale" do
+/// dispositivo. Atualizado sempre que o idioma muda (arranque e Definições),
+/// e lido pelo MaterialApp em SchedifyApp para definir a sua `locale`.
+final ValueNotifier<AppLanguage> currentAppLanguage = ValueNotifier(AppLanguage.pt);
+
+Locale localeFor(AppLanguage language) => Locale(language == AppLanguage.en ? 'en' : 'pt');
+
 /// Frequência de pagamento (ciclo de acumulação/relatório em Pagamentos).
 enum PaymentType {
   avulso,
@@ -38,6 +47,17 @@ class ActivityLabels {
   final String rateLabel;
   final bool flatRate; // true = valor fixo por sessão, false = valor por hora
 
+  /// Género gramatical de [sessionSingular]/[sessionPlural] em português —
+  /// "Aula"/"Consulta"/"Sessão" são femininas, mas "Treino"/"Treinos"
+  /// (Fitness) é masculino. Usado para concordar corretamente particípios
+  /// como "registada(s)"/"registado(s)" nas strings que os incluem.
+  final bool sessionIsMasculine;
+
+  /// Género gramatical de [serviceTypeLabel] em português — "Disciplina"/
+  /// "Modalidade"/"Especialidade" são femininas, mas "Serviço" (Outros
+  /// Serviços) é masculino.
+  final bool serviceTypeIsMasculine;
+
   const ActivityLabels({
     required this.areaName,
     required this.clientSingular,
@@ -49,6 +69,8 @@ class ActivityLabels {
     required this.frequencyLabel,
     required this.rateLabel,
     required this.flatRate,
+    this.sessionIsMasculine = false,
+    this.serviceTypeIsMasculine = false,
   });
 }
 
@@ -68,6 +90,8 @@ ActivityLabels getLabels(ActivityType type, [AppLanguage language = AppLanguage.
         frequencyLabel: isEn ? 'Class frequency' : 'Frequência da aula',
         rateLabel: isEn ? 'Rate per hour (€)' : 'Valor por hora (€)',
         flatRate: false,
+        sessionIsMasculine: false,
+        serviceTypeIsMasculine: false,
       );
     case ActivityType.fitness:
       return ActivityLabels(
@@ -81,6 +105,8 @@ ActivityLabels getLabels(ActivityType type, [AppLanguage language = AppLanguage.
         frequencyLabel: isEn ? 'Workout frequency' : 'Frequência do treino',
         rateLabel: isEn ? 'Rate per hour (€)' : 'Valor por hora (€)',
         flatRate: false,
+        sessionIsMasculine: true,
+        serviceTypeIsMasculine: false, // "Modalidade / Serviço" -> palavra pública é "Modalidade"
       );
     case ActivityType.health:
       return ActivityLabels(
@@ -107,9 +133,16 @@ ActivityLabels getLabels(ActivityType type, [AppLanguage language = AppLanguage.
         frequencyLabel: isEn ? 'Session frequency' : 'Frequência da sessão',
         rateLabel: isEn ? 'Rate per hour (€)' : 'Valor por hora (€)',
         flatRate: false,
+        serviceTypeIsMasculine: true, // "Serviço"
       );
   }
 }
+
+/// Usa só a primeira palavra/segmento de nomenclaturas compostas (ex.:
+/// "Alunos/Formandos" → "Alunos", "Especialidade / Tipo de consulta" →
+/// "Especialidade"), para caber em espaços apertados como a barra de
+/// navegação inferior ou o título de um AppBar.
+String shortCompoundLabel(String label) => label.split('/').first.trim();
 
 String paymentTypeLabel(PaymentType type, [AppLanguage language = AppLanguage.pt]) {
   final isEn = language == AppLanguage.en;
@@ -150,6 +183,32 @@ class WeeklySlot {
       );
 }
 
+/// Exceção pontual ao horário fixo de um cliente: move ou cancela uma única
+/// ocorrência (ex.: "esta segunda em particular passou para quarta"), sem
+/// alterar o padrão semanal/mensal que continua a gerar todas as outras.
+/// [originalScheduledFor] é a data+hora que o padrão teria produzido nesse
+/// dia (congelada no momento da ação, para conseguir mostrar/reverter mais
+/// tarde); [newDateTime] é `null` quando a ocorrência foi cancelada, ou a
+/// nova data+hora quando foi só reagendada.
+class OccurrenceOverride {
+  final DateTime originalScheduledFor;
+  final DateTime? newDateTime;
+
+  const OccurrenceOverride({required this.originalScheduledFor, this.newDateTime});
+
+  bool get isCancelled => newDateTime == null;
+
+  Map<String, dynamic> toJson() => {
+        'originalScheduledFor': originalScheduledFor.toIso8601String(),
+        'newDateTime': newDateTime?.toIso8601String(),
+      };
+
+  factory OccurrenceOverride.fromJson(Map<String, dynamic> json) => OccurrenceOverride(
+        originalScheduledFor: DateTime.parse(json['originalScheduledFor'] as String),
+        newDateTime: json['newDateTime'] != null ? DateTime.parse(json['newDateTime'] as String) : null,
+      );
+}
+
 class Client {
   final String id;
   final String name;
@@ -177,6 +236,13 @@ class Client {
   /// para o distinguir visualmente (cor) se o tipo global for alterado depois.
   final ActivityType activityType;
 
+  /// Exceções pontuais ao horário fixo (ver [OccurrenceOverride]) — no
+  /// máximo uma por dia original. Por omissão vazia: não é `required` de
+  /// propósito, para não obrigar a tocar em todos os sítios que já
+  /// constroem `Client(...)` diretamente (formulário, testes) só por causa
+  /// desta funcionalidade.
+  final List<OccurrenceOverride> occurrenceOverrides;
+
   Client({
     required this.id,
     required this.name,
@@ -194,6 +260,7 @@ class Client {
     required this.hasVat,
     required this.paymentType,
     required this.activityType,
+    this.occurrenceOverrides = const [],
   });
 
   Client copyWith({
@@ -213,6 +280,7 @@ class Client {
     bool? hasVat,
     PaymentType? paymentType,
     ActivityType? activityType,
+    List<OccurrenceOverride>? occurrenceOverrides,
   }) {
     return Client(
       id: id,
@@ -231,6 +299,7 @@ class Client {
       hasVat: hasVat ?? this.hasVat,
       paymentType: paymentType ?? this.paymentType,
       activityType: activityType ?? this.activityType,
+      occurrenceOverrides: occurrenceOverrides ?? this.occurrenceOverrides,
     );
   }
 
@@ -251,6 +320,7 @@ class Client {
         'hasVat': hasVat,
         'paymentType': paymentType.name,
         'activityType': activityType.name,
+        'occurrenceOverrides': occurrenceOverrides.map((o) => o.toJson()).toList(),
       };
 
   factory Client.fromJson(Map<String, dynamic> json) => Client(
@@ -270,6 +340,10 @@ class Client {
         hasVat: json['hasVat'] as bool,
         paymentType: PaymentType.values.byName(json['paymentType'] as String),
         activityType: ActivityType.values.byName(json['activityType'] as String? ?? 'education'),
+        occurrenceOverrides: (json['occurrenceOverrides'] as List<dynamic>?)
+                ?.map((o) => OccurrenceOverride.fromJson(o as Map<String, dynamic>))
+                .toList() ??
+            const [],
       );
 }
 
@@ -330,10 +404,25 @@ class SessionRecord {
       );
 }
 
-/// Uma ocorrência planeada (ainda não registada) de uma sessão para um cliente.
+/// Uma ocorrência planeada (ainda não registada) de uma sessão para um
+/// cliente. [originalScheduledFor] é a data+hora que o horário fixo geraria
+/// nesse dia — normalmente igual a [scheduledFor], exceto quando existe um
+/// [OccurrenceOverride] a mover essa ocorrência (nesse caso é a "chave" para
+/// criar/substituir/reverter o override). [isCancelled] marca uma linha
+/// "fantasma" no dia original de uma ocorrência cancelada, só para dar
+/// forma de a reagendar/reverter mais tarde.
 class PlannedOccurrence {
   final Client client;
   final DateTime scheduledFor;
+  final DateTime originalScheduledFor;
+  final bool isCancelled;
 
-  const PlannedOccurrence({required this.client, required this.scheduledFor});
+  const PlannedOccurrence({
+    required this.client,
+    required this.scheduledFor,
+    DateTime? originalScheduledFor,
+    this.isCancelled = false,
+  }) : originalScheduledFor = originalScheduledFor ?? scheduledFor;
+
+  bool get isMoved => !isCancelled && originalScheduledFor != scheduledFor;
 }

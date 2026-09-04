@@ -114,8 +114,26 @@ class _HomeShellState extends State<HomeShell> {
 
   Future<void> _openSchedule() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ScheduleScreen(activityType: _activityType, language: _language, clients: _clients)),
+      MaterialPageRoute(
+        builder: (_) => ScheduleScreen(
+          activityType: _activityType,
+          language: _language,
+          clients: _clients,
+          onClientUpdated: _updateClientFromSchedule,
+        ),
+      ),
     );
+  }
+
+  /// Reflete uma alteração feita no Horário (reagendar/cancelar/reverter uma
+  /// única ocorrência) de volta na lista principal de clientes e persiste.
+  void _updateClientFromSchedule(Client updated) {
+    setState(() {
+      final index = _clients.indexWhere((c) => c.id == updated.id);
+      if (index >= 0) _clients[index] = updated;
+    });
+    _bumpSessionsTick();
+    _persist();
   }
 
   Future<void> _openSettings() async {
@@ -129,13 +147,17 @@ class _HomeShellState extends State<HomeShell> {
         _activityType = result.activityType;
         _language = result.language;
       });
+      currentAppLanguage.value = result.language;
       _persist();
     }
   }
 
   void _registerOccurrence(PlannedOccurrence occurrence) {
     final client = occurrence.client;
-    final labels = getLabels(_activityType, _language);
+    // Usa o tipo de atividade do próprio cliente (não o da área de trabalho
+    // atual) para que o género gramatical/nomenclatura fique correto mesmo a
+    // registar, a partir da vista "Todos", um cliente de outra atividade.
+    final labels = getLabels(client.activityType, _language);
     final amount = calculateSessionAmount(client, client.sessionDurationMinutes);
 
     final session = SessionRecord(
@@ -156,7 +178,7 @@ class _HomeShellState extends State<HomeShell> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(s.registeredSnackbar(labels.sessionSingular, client.name)),
+        content: Text(s.registeredSnackbar(labels.sessionSingular, client.name, masculine: labels.sessionIsMasculine)),
         action: SnackBarAction(label: s.undo, onPressed: () => _removeSession(client.id, session.id)),
       ),
     );
@@ -185,7 +207,7 @@ class _HomeShellState extends State<HomeShell> {
     _persist();
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.confirmPaymentBody(group.client.name, group.periodLabel(_language)))),
+      SnackBar(content: Text(s.paymentMarkedPaidSnackbar(group.client.name, group.periodLabel(_language)))),
     );
   }
 
@@ -198,66 +220,64 @@ class _HomeShellState extends State<HomeShell> {
     _persist();
   }
 
-  /// Usa só a primeira palavra/segmento de nomenclaturas compostas (ex.:
-  /// "Alunos/Formandos" → "Alunos", "Especialidade / Tipo de consulta" →
-  /// "Especialidade") para que os rótulos do menu inferior tenham sempre um
-  /// comprimento semelhante e os ícones fiquem uniformemente espaçados.
-  String _shortNavLabel(String label) => label.split('/').first.trim();
-
   /// Alunos/clientes da área de trabalho atual (Tipo de Atividade escolhido
   /// nas Definições). Alunos, Disciplinas e Pagamentos mostram só isto; o
   /// Dashboard continua a ver tudo, para dar a visão global do negócio.
   List<Client> get _workspaceClients => _clients.where((c) => c.activityType == _activityType).toList();
 
-  Widget _buildCurrentPage() {
-    switch (_currentIndex) {
-      case 0:
-        final now = DateTime.now();
-        return DashboardTab(
-          activityType: _activityType,
-          language: _language,
-          activityStats: statsByActivity(_clients, _sessionsByClient),
-          upcomingThisWeek: upcomingThisWeek(_clients, _sessionsByClient, now),
-          registerableNow: registerableNow(_clients, _sessionsByClient, now),
-          sessionsTick: _sessionsTick,
-          registerableNowProvider: () => registerableNow(_clients, _sessionsByClient, DateTime.now()),
-          onAddClient: () => _openAddClientScreen(),
-          onOpenSchedule: _openSchedule,
-          onOpenSettings: _openSettings,
-          onRegisterOccurrence: _registerOccurrence,
-        );
-      case 1:
-        return ClientsTab(
-          activityType: _activityType,
-          language: _language,
-          clients: _workspaceClients,
-          allClients: _clients,
-          onAddClient: () => _openAddClientScreen(),
-          onOpenClient: _openClientDetail,
-          onOpenSettings: _openSettings,
-        );
-      case 2:
-        return SubjectsTab(
-          activityType: _activityType,
-          language: _language,
-          clients: _workspaceClients,
-          allClients: _clients,
-          onOpenSettings: _openSettings,
-        );
-      case 3:
-        return PaymentsTab(
-          activityType: _activityType,
-          language: _language,
-          clients: _workspaceClients,
-          sessionsByClient: _sessionsByClient,
-          onOpenClient: _openClientDetail,
-          onMarkGroupPaid: _markGroupPaid,
-          onClearGroup: _clearGroup,
-          onOpenSettings: _openSettings,
-        );
-      default:
-        return const SizedBox.shrink();
-    }
+  /// Uma entrada por separador, na mesma ordem do `BottomNavigationBar`. Usa
+  /// [IndexedStack] em vez de construir só o separador atual: assim os
+  /// restantes ficam "offstage" mas montados, e não perdem o seu estado
+  /// interno (ex.: o toggle "Nesta atividade/Todos", ou o registo de que um
+  /// relatório de pagamento já foi enviado) sempre que se muda de separador.
+  List<Widget> _buildTabs() {
+    final now = DateTime.now();
+    return [
+      DashboardTab(
+        key: const ValueKey('dashboard'),
+        activityType: _activityType,
+        language: _language,
+        activityStats: statsByActivity(_clients, _sessionsByClient),
+        upcomingThisWeek: upcomingThisWeek(_clients, _sessionsByClient, now),
+        registerableNow: registerableNow(_clients, _sessionsByClient, now),
+        sessionsTick: _sessionsTick,
+        registerableNowProvider: () => registerableNow(_clients, _sessionsByClient, DateTime.now()),
+        onAddClient: () => _openAddClientScreen(),
+        onOpenSchedule: _openSchedule,
+        onOpenSettings: _openSettings,
+        onRegisterOccurrence: _registerOccurrence,
+      ),
+      ClientsTab(
+        key: const ValueKey('clients'),
+        activityType: _activityType,
+        language: _language,
+        clients: _workspaceClients,
+        allClients: _clients,
+        onAddClient: () => _openAddClientScreen(),
+        onOpenClient: _openClientDetail,
+        onOpenSettings: _openSettings,
+      ),
+      SubjectsTab(
+        key: const ValueKey('subjects'),
+        activityType: _activityType,
+        language: _language,
+        clients: _workspaceClients,
+        allClients: _clients,
+        onOpenSettings: _openSettings,
+      ),
+      PaymentsTab(
+        key: const ValueKey('payments'),
+        activityType: _activityType,
+        language: _language,
+        clients: _workspaceClients,
+        allClients: _clients,
+        sessionsByClient: _sessionsByClient,
+        onOpenClient: _openClientDetail,
+        onMarkGroupPaid: _markGroupPaid,
+        onClearGroup: _clearGroup,
+        onOpenSettings: _openSettings,
+      ),
+    ];
   }
 
   @override
@@ -265,7 +285,7 @@ class _HomeShellState extends State<HomeShell> {
     final labels = getLabels(_activityType, _language);
 
     return Scaffold(
-      body: _buildCurrentPage(),
+      body: IndexedStack(index: _currentIndex, children: _buildTabs()),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         type: BottomNavigationBarType.fixed,
@@ -278,8 +298,8 @@ class _HomeShellState extends State<HomeShell> {
         onTap: (index) => setState(() => _currentIndex = index),
         items: [
           BottomNavigationBarItem(icon: const Icon(Icons.dashboard_outlined), label: s.navHome),
-          BottomNavigationBarItem(icon: const Icon(Icons.people_outline), label: _shortNavLabel(labels.clientPlural)),
-          BottomNavigationBarItem(icon: const Icon(Icons.menu_book_outlined), label: _shortNavLabel(labels.serviceTypeLabel)),
+          BottomNavigationBarItem(icon: const Icon(Icons.people_outline), label: shortCompoundLabel(labels.clientPlural)),
+          BottomNavigationBarItem(icon: const Icon(Icons.menu_book_outlined), label: shortCompoundLabel(labels.serviceTypeLabel)),
           BottomNavigationBarItem(icon: const Icon(Icons.payments_outlined), label: s.navPayments),
         ],
       ),

@@ -62,7 +62,7 @@ class _SubjectsTabState extends State<SubjectsTab> {
     final subjects = _showAll ? _groupByName(widget.allClients) : _groupByName(widget.clients);
 
     final totalCount = subjects.length;
-    final title = _showAll ? s.allEnrolledTitle : labels.serviceTypeLabel;
+    final title = _showAll ? s.allActivitiesTitle : labels.serviceTypeLabel;
 
     return SafeArea(
       child: Padding(
@@ -72,7 +72,7 @@ class _SubjectsTabState extends State<SubjectsTab> {
           children: [
             const AppHeader(),
             const SizedBox(height: 6),
-            ScreenTitleRow(title: title, onOpenSettings: widget.onOpenSettings),
+            ScreenTitleRow(title: title, onOpenSettings: widget.onOpenSettings, settingsTooltip: s.settingsTitle),
             if (showToggle) ...[
               const SizedBox(height: 12),
               SegmentedButton<bool>(
@@ -87,7 +87,7 @@ class _SubjectsTabState extends State<SubjectsTab> {
             ],
             const SizedBox(height: 8),
             Text(
-              s.subjectsCreated(totalCount),
+              s.subjectsCreated(totalCount, masculine: !_showAll && labels.serviceTypeIsMasculine),
               style: const TextStyle(fontSize: 16, color: AppColors.neutralSoft, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 20),

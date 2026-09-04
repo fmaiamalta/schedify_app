@@ -6,6 +6,27 @@ const int _maxHorizonDays = 365 * 2;
 
 DateTime dateOnly(DateTime value) => DateTime(value.year, value.month, value.day);
 
+/// Soma (ou subtrai, com [days] negativo) dias a uma data em aritmética de
+/// calendário (ano/mês/dia), em vez de `date.add(Duration(days: n))`. A
+/// diferença importa: somar uma Duration soma tempo absoluto decorrido, o que
+/// à volta de uma mudança de hora (DST) desloca a hora do resultado (ex.:
+/// meia-noite passa a 01:00), o que por sua vez pode fazer o cursor "saltar"
+/// ou "repetir" um dia em ciclos de geração de ocorrências. O construtor
+/// [DateTime] com o dia fora do intervalo normaliza corretamente pelo
+/// calendário, sem este desvio.
+DateTime addCalendarDays(DateTime date, int days) {
+  return DateTime(date.year, date.month, date.day + days, date.hour, date.minute, date.second, date.millisecond, date.microsecond);
+}
+
+/// Número de dias de calendário entre duas datas (independente de mudanças de
+/// hora), usado em vez de `to.difference(from).inDays` para evitar o mesmo
+/// desvio de tempo absoluto descrito em [addCalendarDays].
+int calendarDaysBetween(DateTime from, DateTime to) {
+  final utcFrom = DateTime.utc(from.year, from.month, from.day);
+  final utcTo = DateTime.utc(to.year, to.month, to.day);
+  return utcTo.difference(utcFrom).inDays;
+}
+
 bool isSameDate(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;
 }
@@ -16,7 +37,7 @@ DateTime combineDateAndTime(DateTime date, TimeOfDay time) {
 
 DateTime startOfWeek(DateTime date) {
   final normalized = dateOnly(date);
-  return normalized.subtract(Duration(days: normalized.weekday - 1));
+  return addCalendarDays(normalized, -(normalized.weekday - 1));
 }
 
 DateTime endOfWeek(DateTime date) {
@@ -27,14 +48,15 @@ DateTime endOfWeek(DateTime date) {
 DateTime startOfMonth(DateTime date) => DateTime(date.year, date.month, 1);
 
 DateTime endOfMonth(DateTime date) {
-  final firstOfNext = DateTime(date.year, date.month + 1, 1);
-  return firstOfNext.subtract(const Duration(days: 1));
+  // dia 0 do mês seguinte = último dia do mês atual (normalização de calendário).
+  final lastDay = DateTime(date.year, date.month + 1, 0);
+  return DateTime(lastDay.year, lastDay.month, lastDay.day, 23, 59, 59, 999);
 }
 
 int weeksBetween(DateTime from, DateTime to) {
   final fromWeek = startOfWeek(from);
   final toWeek = startOfWeek(to);
-  return toWeek.difference(fromWeek).inDays ~/ 7;
+  return calendarDaysBetween(fromWeek, toWeek) ~/ 7;
 }
 
 /// Devolve os dias da semana exigidos pela frequência da sessão selecionada
@@ -65,7 +87,7 @@ DateTime nearestMatchingDate(DateTime from, List<int> weekdays) {
   var cursor = dateOnly(from);
   for (var i = 0; i < 7; i++) {
     if (weekdays.contains(cursor.weekday)) return cursor;
-    cursor = cursor.add(const Duration(days: 1));
+    cursor = addCalendarDays(cursor, 1);
   }
   return from;
 }
@@ -93,9 +115,13 @@ String _formatDate(DateTime date) {
   return '$day/$month/${date.year}';
 }
 
-/// Gera todas as ocorrências (data+hora) de um cliente entre `rangeStart` e
-/// `rangeEnd` (inclusive), de acordo com a frequência de sessão escolhida.
-List<DateTime> generateOccurrencesInRange(
+/// Gera as ocorrências (data+hora) de um cliente entre `rangeStart` e
+/// `rangeEnd` (inclusive) de acordo com a frequência de sessão escolhida —
+/// sem aplicar [OccurrenceOverride]s (ver [generateResolvedOccurrencesInRange]
+/// para isso). Uso interno; mantém-se privada para que a assinatura pública
+/// [generateOccurrencesInRange] (que várias chamadas e testes de DST já
+/// dependem devolver `List<DateTime>`) não precise de mudar.
+List<DateTime> _generateRawOccurrences(
   Client client, {
   required DateTime rangeStart,
   required DateTime rangeEnd,
@@ -153,7 +179,7 @@ List<DateTime> generateOccurrencesInRange(
           occurrences.add(combineDateAndTime(cursor, slot.time));
         }
       }
-      cursor = cursor.add(const Duration(days: 1));
+      cursor = addCalendarDays(cursor, 1);
       guard++;
     }
     return occurrences;
@@ -168,10 +194,75 @@ List<DateTime> generateOccurrencesInRange(
     if (time != null) {
       occurrences.add(combineDateAndTime(cursor, time));
     }
-    cursor = cursor.add(const Duration(days: 1));
+    cursor = addCalendarDays(cursor, 1);
     guard++;
   }
   return occurrences;
+}
+
+/// Uma ocorrência já com [OccurrenceOverride]s aplicados: [scheduledFor] é a
+/// data+hora efetiva (a original, ou a nova se tiver sido reagendada);
+/// [originalScheduledFor] é sempre a data+hora que o horário fixo geraria.
+class ResolvedOccurrence {
+  final DateTime originalScheduledFor;
+  final DateTime scheduledFor;
+  const ResolvedOccurrence({required this.originalScheduledFor, required this.scheduledFor});
+}
+
+/// Como [generateOccurrencesInRange], mas já com as exceções pontuais do
+/// cliente ([Client.occurrenceOverrides]) aplicadas: uma ocorrência cancelada
+/// desaparece do seu dia original; uma ocorrência movida aparece na nova
+/// data+hora (mesmo que o dia original esteja fora de `rangeStart`/`rangeEnd`,
+/// desde que a nova data caia dentro do intervalo pedido).
+List<ResolvedOccurrence> generateResolvedOccurrencesInRange(
+  Client client, {
+  required DateTime rangeStart,
+  required DateTime rangeEnd,
+}) {
+  final raw = _generateRawOccurrences(client, rangeStart: rangeStart, rangeEnd: rangeEnd);
+  if (client.occurrenceOverrides.isEmpty) {
+    return [for (final occ in raw) ResolvedOccurrence(originalScheduledFor: occ, scheduledFor: occ)];
+  }
+
+  final effectiveRangeStart = dateOnly(rangeStart);
+  final effectiveRangeEnd = dateOnly(rangeEnd);
+  final overridesByDay = {for (final o in client.occurrenceOverrides) dateOnly(o.originalScheduledFor): o};
+
+  final result = <ResolvedOccurrence>[];
+  for (final occ in raw) {
+    // Se existir um override para este dia (cancelada ou movida), a
+    // ocorrência já não aparece no dia original — nunca as duas ao mesmo tempo.
+    if (overridesByDay.containsKey(dateOnly(occ))) continue;
+    result.add(ResolvedOccurrence(originalScheduledFor: occ, scheduledFor: occ));
+  }
+
+  // Ocorrências movidas PARA DENTRO deste intervalo, mesmo que o dia
+  // original tenha ficado fora do intervalo bruto gerado acima.
+  for (final override in client.occurrenceOverrides) {
+    final moved = override.newDateTime;
+    if (moved == null) continue; // cancelada: nada a injetar
+    final movedDay = dateOnly(moved);
+    if (!movedDay.isBefore(effectiveRangeStart) && !movedDay.isAfter(effectiveRangeEnd)) {
+      result.add(ResolvedOccurrence(originalScheduledFor: override.originalScheduledFor, scheduledFor: moved));
+    }
+  }
+
+  result.sort((a, b) => a.scheduledFor.compareTo(b.scheduledFor));
+  return result;
+}
+
+/// Gera todas as ocorrências (data+hora) de um cliente entre `rangeStart` e
+/// `rangeEnd` (inclusive), já com exceções pontuais aplicadas — usado sempre
+/// que só interessa a data+hora efetiva, não a distinção original/nova (ex.:
+/// `_monthlyPeriodEnd`, que só quer saber o último dia de atividade do mês).
+List<DateTime> generateOccurrencesInRange(
+  Client client, {
+  required DateTime rangeStart,
+  required DateTime rangeEnd,
+}) {
+  return generateResolvedOccurrencesInRange(client, rangeStart: rangeStart, rangeEnd: rangeEnd)
+      .map((r) => r.scheduledFor)
+      .toList();
 }
 
 /// Ocorrências planeadas desta semana (hoje a domingo) que ainda não foram registadas.
@@ -183,12 +274,19 @@ List<PlannedOccurrence> upcomingThisWeek(
   final weekEnd = endOfWeek(now);
   final result = <PlannedOccurrence>[];
   for (final client in clients) {
-    final occurrences = generateOccurrencesInRange(client, rangeStart: now, rangeEnd: weekEnd);
+    final occurrences = generateResolvedOccurrencesInRange(client, rangeStart: now, rangeEnd: weekEnd);
     final registered = sessionsByClient[client.id] ?? [];
     for (final occurrence in occurrences) {
-      final alreadyRegistered = registered.any((s) => isSameDate(s.scheduledFor, occurrence) && s.scheduledFor.hour == occurrence.hour && s.scheduledFor.minute == occurrence.minute);
+      final alreadyRegistered = registered.any((s) =>
+          isSameDate(s.scheduledFor, occurrence.scheduledFor) &&
+          s.scheduledFor.hour == occurrence.scheduledFor.hour &&
+          s.scheduledFor.minute == occurrence.scheduledFor.minute);
       if (!alreadyRegistered) {
-        result.add(PlannedOccurrence(client: client, scheduledFor: occurrence));
+        result.add(PlannedOccurrence(
+          client: client,
+          scheduledFor: occurrence.scheduledFor,
+          originalScheduledFor: occurrence.originalScheduledFor,
+        ));
       }
     }
   }
@@ -202,16 +300,23 @@ List<PlannedOccurrence> registerableNow(
   Map<String, List<SessionRecord>> sessionsByClient,
   DateTime now,
 ) {
-  final rangeStart = dateOnly(now).subtract(const Duration(days: 7));
+  final rangeStart = addCalendarDays(dateOnly(now), -7);
   final rangeEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
   final result = <PlannedOccurrence>[];
   for (final client in clients) {
-    final occurrences = generateOccurrencesInRange(client, rangeStart: rangeStart, rangeEnd: rangeEnd);
+    final occurrences = generateResolvedOccurrencesInRange(client, rangeStart: rangeStart, rangeEnd: rangeEnd);
     final registered = sessionsByClient[client.id] ?? [];
     for (final occurrence in occurrences) {
-      final alreadyRegistered = registered.any((s) => isSameDate(s.scheduledFor, occurrence) && s.scheduledFor.hour == occurrence.hour && s.scheduledFor.minute == occurrence.minute);
+      final alreadyRegistered = registered.any((s) =>
+          isSameDate(s.scheduledFor, occurrence.scheduledFor) &&
+          s.scheduledFor.hour == occurrence.scheduledFor.hour &&
+          s.scheduledFor.minute == occurrence.scheduledFor.minute);
       if (!alreadyRegistered) {
-        result.add(PlannedOccurrence(client: client, scheduledFor: occurrence));
+        result.add(PlannedOccurrence(
+          client: client,
+          scheduledFor: occurrence.scheduledFor,
+          originalScheduledFor: occurrence.originalScheduledFor,
+        ));
       }
     }
   }
@@ -267,6 +372,20 @@ List<ActivityStats> statsByActivity(List<Client> clients, Map<String, List<Sessi
   return result;
 }
 
+/// Acrescenta/substitui a exceção pontual de [updated] à lista — no máximo
+/// uma por dia original (`originalScheduledFor`); uma segunda ação sobre o
+/// mesmo dia substitui a anterior em vez de duplicar.
+List<OccurrenceOverride> upsertOverride(List<OccurrenceOverride> existing, OccurrenceOverride updated) {
+  final filtered = existing.where((o) => !isSameDate(o.originalScheduledFor, updated.originalScheduledFor)).toList();
+  return [...filtered, updated];
+}
+
+/// Remove a exceção pontual (se existir) para o dia original indicado —
+/// usado para "reverter ao horário normal".
+List<OccurrenceOverride> removeOverrideForDay(List<OccurrenceOverride> existing, DateTime originalDay) {
+  return existing.where((o) => !isSameDate(o.originalScheduledFor, originalDay)).toList();
+}
+
 /// Um grupo de sessões que pertence ao mesmo ciclo de pagamento (semana, mês, ou
 /// sessão avulsa), usado no ecrã de Pagamentos para acumulação e relatório.
 class PaymentCycleGroup {
@@ -283,6 +402,15 @@ class PaymentCycleGroup {
     required this.periodEnd,
     required this.sessions,
   });
+
+  /// Identificador estável deste ciclo, único mesmo para dois ciclos Avulso
+  /// do mesmo cliente no mesmo dia (que partilhariam periodStart/periodEnd) —
+  /// usado pela UI (ex.: PaymentsTab) para controlar por ciclo, e não por
+  /// dia, se o relatório já foi enviado.
+  String get cycleId {
+    if (frequency == PaymentType.avulso) return 'avulso:${sessions.single.id}';
+    return '${periodStart.toIso8601String()}_${periodEnd.toIso8601String()}';
+  }
 
   int get totalSessions => sessions.length;
 
@@ -319,9 +447,36 @@ class PaymentCycleGroup {
   }
 }
 
+/// Fim de um ciclo mensal: não é o último dia do calendário, mas o dia da
+/// última ocorrência da atividade nesse mês (ex.: se as aulas são à
+/// segunda-feira e a última segunda do mês é dia 27, o ciclo termina dia 27,
+/// mesmo que o mês tenha mais dias a seguir), de acordo com o horário
+/// *atual* do cliente.
+///
+/// [lastRegisteredSession] (a mais recente sessão já efetivamente registada
+/// nesse mês) serve de garantia mínima: o ciclo nunca pode fechar antes
+/// dela, mesmo que o horário atual (ex.: editado depois de sessões antigas
+/// terem sido registadas noutro dia da semana, ou tê-lo esvaziado por
+/// completo nesse mês) projete um fim mais cedo ou nenhuma ocorrência.
+DateTime _monthlyPeriodEnd(Client client, DateTime monthAnchor, {required DateTime lastRegisteredSession}) {
+  final monthStart = startOfMonth(monthAnchor);
+  final calendarEnd = endOfMonth(monthAnchor);
+  final occurrences = generateOccurrencesInRange(client, rangeStart: monthStart, rangeEnd: calendarEnd);
+
+  final lastRegisteredDay = dateOnly(lastRegisteredSession);
+  final lastRegisteredEnd = DateTime(lastRegisteredDay.year, lastRegisteredDay.month, lastRegisteredDay.day, 23, 59, 59, 999);
+  if (occurrences.isEmpty) return lastRegisteredEnd;
+
+  final lastOccurrenceDay = occurrences.map(dateOnly).reduce((a, b) => a.isAfter(b) ? a : b);
+  final scheduleEnd = DateTime(lastOccurrenceDay.year, lastOccurrenceDay.month, lastOccurrenceDay.day, 23, 59, 59, 999);
+
+  return scheduleEnd.isAfter(lastRegisteredEnd) ? scheduleEnd : lastRegisteredEnd;
+}
+
 /// Agrupa as sessões registadas de um cliente em ciclos de pagamento, de acordo
 /// com a frequência de pagamento escolhida (Avulso = 1 sessão por ciclo,
-/// Semanal = semana ISO, Mensal = mês civil).
+/// Semanal = semana ISO, Mensal = mês civil, terminando no dia da última
+/// ocorrência efetiva da atividade nesse mês).
 List<PaymentCycleGroup> computePaymentCycles(Client client, List<SessionRecord> sessions) {
   if (sessions.isEmpty) return [];
 
@@ -337,33 +492,52 @@ List<PaymentCycleGroup> computePaymentCycles(Client client, List<SessionRecord> 
         .toList();
   }
 
-  final groups = <String, PaymentCycleGroup>{};
-  for (final session in sessions) {
-    final DateTime periodStart;
-    final DateTime periodEnd;
-    if (client.paymentType == PaymentType.semanal) {
-      periodStart = startOfWeek(session.scheduledFor);
-      periodEnd = dateOnly(endOfWeek(session.scheduledFor));
-    } else {
-      periodStart = startOfMonth(session.scheduledFor);
-      periodEnd = endOfMonth(session.scheduledFor);
+  if (client.paymentType == PaymentType.semanal) {
+    final groups = <String, PaymentCycleGroup>{};
+    for (final session in sessions) {
+      final periodStart = startOfWeek(session.scheduledFor);
+      final periodEnd = dateOnly(endOfWeek(session.scheduledFor));
+      final key = '${periodStart.toIso8601String()}_${periodEnd.toIso8601String()}';
+      final existing = groups[key];
+      if (existing == null) {
+        groups[key] = PaymentCycleGroup(
+          client: client,
+          frequency: client.paymentType,
+          periodStart: periodStart,
+          periodEnd: periodEnd,
+          sessions: [session],
+        );
+      } else {
+        existing.sessions.add(session);
+      }
     }
-    final key = '${periodStart.toIso8601String()}_${periodEnd.toIso8601String()}';
-    final existing = groups[key];
-    if (existing == null) {
-      groups[key] = PaymentCycleGroup(
-        client: client,
-        frequency: client.paymentType,
-        periodStart: periodStart,
-        periodEnd: periodEnd,
-        sessions: [session],
-      );
-    } else {
-      existing.sessions.add(session);
-    }
+    final result = groups.values.toList();
+    result.sort((a, b) => b.periodStart.compareTo(a.periodStart));
+    return result;
   }
 
-  final result = groups.values.toList();
+  // Mensal: primeiro agrupa TODAS as sessões por mês civil, só depois calcula
+  // o fim de cada ciclo (uma vez por mês, já com todas as sessões desse mês
+  // conhecidas) -- necessário para poder usar a última sessão efetivamente
+  // registada como referência quando o horário atual do cliente já não
+  // projeta nenhuma ocorrência nesse mês (ver _monthlyPeriodEnd).
+  final byMonth = <DateTime, List<SessionRecord>>{};
+  for (final session in sessions) {
+    byMonth.putIfAbsent(startOfMonth(session.scheduledFor), () => []).add(session);
+  }
+
+  final result = byMonth.entries.map((entry) {
+    final monthStart = entry.key;
+    final monthSessions = entry.value;
+    final lastRegistered = monthSessions.map((s) => s.scheduledFor).reduce((a, b) => a.isAfter(b) ? a : b);
+    return PaymentCycleGroup(
+      client: client,
+      frequency: client.paymentType,
+      periodStart: monthStart,
+      periodEnd: _monthlyPeriodEnd(client, monthStart, lastRegisteredSession: lastRegistered),
+      sessions: monthSessions,
+    );
+  }).toList();
   result.sort((a, b) => b.periodStart.compareTo(a.periodStart));
   return result;
 }

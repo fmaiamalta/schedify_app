@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'home_shell.dart';
 import 'i18n/app_strings.dart';
 import 'models.dart';
@@ -6,7 +8,17 @@ import 'services/storage_service.dart';
 import 'theme.dart';
 import 'widgets/shared_widgets.dart';
 
-void main() {
+void main() async {
+  // O layout de todos os ecrãs foi desenhado só para retrato (cartões e
+  // barra de navegação inferior de largura fixa); em paisagem alguns ecrãs
+  // (ex.: Alunos, Disciplinas) sofrem overflow vertical porque o cabeçalho e
+  // os títulos fixos não cabem na altura menor. Bloquear a orientação evita
+  // esta classe de problema em vez de reescrever cada ecrã para paisagem.
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   runApp(const SchedifyApp());
 }
 
@@ -15,15 +27,27 @@ class SchedifyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Schedify',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF7F8FA),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0B2A7A)),
-        useMaterial3: true,
-      ),
-      home: const StartupGate(),
+    return ValueListenableBuilder<AppLanguage>(
+      valueListenable: currentAppLanguage,
+      builder: (context, language, _) {
+        return MaterialApp(
+          title: 'Schedify',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            scaffoldBackgroundColor: const Color(0xFFF7F8FA),
+            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0B2A7A)),
+            useMaterial3: true,
+          ),
+          locale: localeFor(language),
+          supportedLocales: const [Locale('pt'), Locale('en')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const StartupGate(),
+        );
+      },
     );
   }
 }
@@ -45,6 +69,12 @@ class _StartupGateState extends State<StartupGate> {
   void initState() {
     super.initState();
     _future = StorageService().load();
+    // Efeito à parte (não dentro de build()): atualizar o ValueNotifier
+    // global durante um build causaria um rebuild reentrante do próprio
+    // MaterialApp (que o escuta) a meio de outro build.
+    _future.then((state) {
+      currentAppLanguage.value = state?.language ?? AppLanguage.pt;
+    });
   }
 
   @override
@@ -57,6 +87,7 @@ class _StartupGateState extends State<StartupGate> {
         }
 
         final state = snapshot.data;
+
         if (state == null || state.clients.isEmpty) {
           // Primeira utilização (ou sem dados ainda): pede o tipo de atividade.
           return ActivitySelectionScreen(initialLanguage: state?.language ?? AppLanguage.pt);
@@ -112,7 +143,11 @@ class ActivitySelectionScreen extends StatelessWidget {
                     return InkWell(
                       borderRadius: BorderRadius.circular(22),
                       onTap: () {
-                        Navigator.of(context).push(
+                        // pushReplacement (não push): a escolha do tipo de atividade é uma
+                        // decisão de arranque única, não um ecrã para onde se deva poder
+                        // voltar — caso contrário, o botão de recuar (Android) volta a
+                        // mostrar o onboarding a partir de qualquer separador principal.
+                        Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
                             builder: (_) => HomeShell(initialActivityType: type, initialLanguage: initialLanguage),
                           ),

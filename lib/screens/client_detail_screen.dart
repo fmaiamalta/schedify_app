@@ -79,7 +79,7 @@ class ClientDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              SectionTitle(title: s.sessionConfigSection(labels.sessionSingular.toLowerCase())),
+              SectionTitle(title: s.sessionConfigSection(labels.sessionSingular.toLowerCase(), masculine: labels.sessionIsMasculine)),
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(18),
@@ -132,7 +132,7 @@ class ClientDetailScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(color: AppColors.surfaceWhite, borderRadius: BorderRadius.circular(22)),
                   child: Text(
-                    s.noneRecordedYet(labels.sessionPlural.toLowerCase()),
+                    s.noneRecordedYet(labels.sessionPlural.toLowerCase(), masculine: labels.sessionIsMasculine),
                     style: const TextStyle(fontSize: 14, color: AppColors.neutralSoft),
                   ),
                 )
@@ -140,7 +140,7 @@ class ClientDetailScreen extends StatelessWidget {
                 ...sortedSessions.map(
                   (session) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: _SessionMiniCard(session: session, s: s),
+                    child: _SessionMiniCard(session: session, s: s, masculine: labels.sessionIsMasculine),
                   ),
                 ),
             ],
@@ -162,8 +162,9 @@ class ClientDetailScreen extends StatelessWidget {
 class _SessionMiniCard extends StatelessWidget {
   final SessionRecord session;
   final AppStrings s;
+  final bool masculine;
 
-  const _SessionMiniCard({required this.session, required this.s});
+  const _SessionMiniCard({required this.session, required this.s, this.masculine = false});
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +192,7 @@ class _SessionMiniCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              session.isPaid ? s.paid : s.pendingBadge,
+              session.isPaid ? s.paidLabel(masculine: masculine) : s.pendingBadge,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

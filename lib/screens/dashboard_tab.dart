@@ -35,11 +35,10 @@ class DashboardTab extends StatelessWidget {
     required this.onRegisterOccurrence,
   });
 
-  void _openRegisterScreen(BuildContext context, ActivityLabels labels, AppStrings s) {
+  void _openRegisterScreen(BuildContext context, AppStrings s) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RegisterScreen(
-          labels: labels,
           strings: s,
           sessionsTick: sessionsTick,
           occurrencesProvider: registerableNowProvider,
@@ -61,7 +60,7 @@ class DashboardTab extends StatelessWidget {
           children: [
             const AppHeader(),
             const SizedBox(height: 6),
-            ScreenTitleRow(title: s.dashboard, onOpenSettings: onOpenSettings),
+            ScreenTitleRow(title: s.dashboard, onOpenSettings: onOpenSettings, settingsTooltip: s.settingsTitle),
             const SizedBox(height: 8),
             Text(
               labels.areaName,
@@ -90,7 +89,7 @@ class DashboardTab extends StatelessWidget {
                     iconColor: AppColors.brandGreen,
                     textColor: AppColors.brandGreen,
                     background: AppColors.brandGreenSoft,
-                    onTap: () => _openRegisterScreen(context, labels, s),
+                    onTap: () => _openRegisterScreen(context, s),
                   ),
                 ),
                 const SizedBox(width: 12),

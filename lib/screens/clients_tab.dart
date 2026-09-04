@@ -48,7 +48,7 @@ class _ClientsTabState extends State<ClientsTab> {
           children: [
             const AppHeader(),
             const SizedBox(height: 6),
-            ScreenTitleRow(title: title, onOpenSettings: widget.onOpenSettings),
+            ScreenTitleRow(title: title, onOpenSettings: widget.onOpenSettings, settingsTooltip: s.settingsTitle),
             if (showToggle) ...[
               const SizedBox(height: 12),
               SegmentedButton<bool>(
