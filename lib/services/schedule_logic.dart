@@ -251,24 +251,33 @@ List<ResolvedOccurrence> generateResolvedOccurrencesInRange(
   return result;
 }
 
-/// Um cliente está "ativo" se tiver pelo menos uma ocorrência cuja data+hora
-/// ainda não passou (comparação exata, não só o dia), dentro dos próximos 60
-/// dias — já com reagendamentos/cancelamentos aplicados. Cobre tanto um
-/// "Avulso" cuja única sessão de hoje já aconteceu mais cedo (ex.: às 18:00,
-/// e já passa das 20:00) como um horário com data de fim ultrapassada. Um
-/// cliente sem horário fixo (padrão recorrente sem data de fim) nunca fica
-/// inativo por esta via. Usado para deixar de contar para "alunos
-/// inscritos" em Disciplina e para assinalar "Inativo" em Alunos — o
-/// registo do cliente nunca é apagado só por isto, já que pode voltar a ter
-/// aulas agendadas mais tarde.
-bool clientHasUpcomingSchedule(Client client, DateTime now) {
+/// Um cliente está "ativo" se tiver pelo menos uma ocorrência ainda por
+/// registar — seja no futuro (qualquer dia a partir de hoje), seja de hoje
+/// ou até 1 semana atrás e ainda não registada (a mesma janela usada por
+/// [registerableNow], para que um cliente nunca desapareça de Disciplina
+/// enquanto ainda aparece como "por registar" no ecrã Registar). Um "Avulso"
+/// de hoje só fica inativo depois de ser efetivamente registado — criá-lo
+/// não o torna inativo instantaneamente, mesmo que a hora agendada já tenha
+/// passado. Um cliente sem horário fixo (padrão recorrente sem data de fim)
+/// nunca fica inativo por esta via. Usado para deixar de contar para
+/// "alunos inscritos" em Disciplina e para assinalar "Inativo" em Alunos —
+/// o registo do cliente nunca é apagado só por isto, já que pode voltar a
+/// ter aulas agendadas mais tarde.
+bool clientHasUpcomingSchedule(Client client, List<SessionRecord> sessions, DateTime now) {
   final today = dateOnly(now);
-  final resolved = generateResolvedOccurrencesInRange(
+  final occurrences = generateResolvedOccurrencesInRange(
     client,
-    rangeStart: today,
+    rangeStart: addCalendarDays(today, -7),
     rangeEnd: addCalendarDays(today, 60),
   );
-  return resolved.any((occurrence) => occurrence.scheduledFor.isAfter(now));
+  for (final occurrence in occurrences) {
+    final alreadyRegistered = sessions.any((s) =>
+        isSameDate(s.scheduledFor, occurrence.scheduledFor) &&
+        s.scheduledFor.hour == occurrence.scheduledFor.hour &&
+        s.scheduledFor.minute == occurrence.scheduledFor.minute);
+    if (!alreadyRegistered) return true;
+  }
+  return false;
 }
 
 /// Gera todas as ocorrências (data+hora) de um cliente entre `rangeStart` e

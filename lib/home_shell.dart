@@ -271,6 +271,7 @@ class _HomeShellState extends State<HomeShell> {
         language: _language,
         clients: _workspaceClients,
         allClients: _clients,
+        sessionsByClient: _sessionsByClient,
         onAddClient: () => _openAddClientScreen(),
         onOpenClient: _openClientDetail,
         onOpenSettings: _openSettings,
@@ -281,6 +282,7 @@ class _HomeShellState extends State<HomeShell> {
         language: _language,
         clients: _workspaceClients,
         allClients: _clients,
+        sessionsByClient: _sessionsByClient,
         onOpenSettings: _openSettings,
       ),
       PaymentsTab(

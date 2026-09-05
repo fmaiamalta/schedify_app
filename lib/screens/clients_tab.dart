@@ -10,6 +10,7 @@ class ClientsTab extends StatefulWidget {
   final AppLanguage language;
   final List<Client> clients;
   final List<Client> allClients;
+  final Map<String, List<SessionRecord>> sessionsByClient;
   final VoidCallback onAddClient;
   final ValueChanged<Client> onOpenClient;
   final VoidCallback onOpenSettings;
@@ -20,6 +21,7 @@ class ClientsTab extends StatefulWidget {
     required this.language,
     required this.clients,
     required this.allClients,
+    required this.sessionsByClient,
     required this.onAddClient,
     required this.onOpenClient,
     required this.onOpenSettings,
@@ -94,7 +96,11 @@ class _ClientsTabState extends State<ClientsTab> {
                       itemBuilder: (context, index) {
                         final client = displayed[index];
                         final subtitle = client.serviceType.trim().isNotEmpty ? client.serviceType : client.contactEmail;
-                        final isActive = clientHasUpcomingSchedule(client, DateTime.now());
+                        final isActive = clientHasUpcomingSchedule(
+                          client,
+                          widget.sessionsByClient[client.id] ?? const [],
+                          DateTime.now(),
+                        );
                         return ClientCard(
                           name: client.name,
                           subtitle: subtitle,

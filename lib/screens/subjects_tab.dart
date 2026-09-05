@@ -17,10 +17,14 @@ class _SubjectSummary {
 /// Só conta clientes ativos (ver [clientHasUpcomingSchedule]): uma
 /// disciplina cujo último aluno terminou o horário deixa de aparecer aqui,
 /// mesmo que o registo do aluno continue a existir em Alunos.
-List<_SubjectSummary> _groupByName(List<Client> clients, DateTime now) {
+List<_SubjectSummary> _groupByName(
+  List<Client> clients,
+  Map<String, List<SessionRecord>> sessionsByClient,
+  DateTime now,
+) {
   final byName = <String, List<Client>>{};
   for (final client in clients) {
-    if (!clientHasUpcomingSchedule(client, now)) continue;
+    if (!clientHasUpcomingSchedule(client, sessionsByClient[client.id] ?? const [], now)) continue;
     final name = client.serviceType.trim();
     if (name.isEmpty) continue;
     byName.putIfAbsent(name, () => []).add(client);
@@ -38,6 +42,7 @@ class SubjectsTab extends StatefulWidget {
   final AppLanguage language;
   final List<Client> clients;
   final List<Client> allClients;
+  final Map<String, List<SessionRecord>> sessionsByClient;
   final VoidCallback onOpenSettings;
 
   const SubjectsTab({
@@ -46,6 +51,7 @@ class SubjectsTab extends StatefulWidget {
     required this.language,
     required this.clients,
     required this.allClients,
+    required this.sessionsByClient,
     required this.onOpenSettings,
   });
 
@@ -65,7 +71,9 @@ class _SubjectsTabState extends State<SubjectsTab> {
     // Nesta atividade: lista simples, já todas do mesmo tipo, por ordem alfabética.
     // Todos: agrupadas por atividade (ordem das Definições) e, dentro de cada uma, por ordem alfabética.
     final now = DateTime.now();
-    final subjects = _showAll ? _groupByName(widget.allClients, now) : _groupByName(widget.clients, now);
+    final subjects = _showAll
+        ? _groupByName(widget.allClients, widget.sessionsByClient, now)
+        : _groupByName(widget.clients, widget.sessionsByClient, now);
 
     final totalCount = subjects.length;
     final title = _showAll ? s.allActivitiesTitle : labels.serviceTypeLabel;
