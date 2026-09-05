@@ -154,6 +154,13 @@ class AppStrings {
 
   // Definições
   String get settingsTitle => _t('Definições', 'Settings');
+  String get providerNameTitle => _t('Nome do prestador de serviço', 'Service provider name');
+  String get providerNameSubtitle => _t(
+        'Usado como assinatura nos relatórios enviados por WhatsApp/email.',
+        'Used as the signature on reports sent via WhatsApp/email.',
+      );
+  String get providerNameHint => _t('O teu nome (ou o do negócio)', 'Your name (or your business name)');
+  String get providerNameRequiredError => _t('Indica o teu nome para continuares.', 'Enter your name to continue.');
   String get activityTypeTitle => _t('Tipo de atividade', 'Activity type');
   String get activityTypeSubtitle => _t('Determina a nomenclatura usada em toda a aplicação.', 'Determines the wording used throughout the app.');
   String get languageTitle => _t('Idioma', 'Language');
@@ -258,21 +265,23 @@ class AppStrings {
     required String totalAmountLabel,
     required String sessionPluralLower,
     bool masculine = false,
+    String providerName = '',
   }) {
+    final signatureLine = providerName.trim().isEmpty ? '' : '\n${providerName.trim()}';
     if (_en) {
       return 'Hello,\n'
           'Here is the summary for $subjectName:\n'
           'Summary: $sessionDatesLabel.\n'
           'Total number of $sessionPluralLower: $totalSessions\n'
           'Total to pay: $totalAmountLabel\n'
-          'Best regards.';
+          'Best regards.$signatureLine';
     }
     return 'Olá,\n'
         'Segue o resumo ${masculine ? 'dos' : 'das'} $sessionPluralLower de $subjectName:\n'
         'Resumo: $sessionDatesLabel.\n'
         'Número total de $sessionPluralLower: $totalSessions\n'
         'Total a pagar: $totalAmountLabel\n'
-        'Cumprimentos.';
+        'Cumprimentos.$signatureLine';
   }
 }
 

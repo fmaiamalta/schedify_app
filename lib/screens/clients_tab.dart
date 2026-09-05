@@ -39,8 +39,17 @@ class _ClientsTabState extends State<ClientsTab> {
     final labels = getLabels(widget.activityType, widget.language);
     final s = AppStrings(widget.language);
     final showToggle = widget.allClients.length > widget.clients.length;
+    final now = DateTime.now();
+    bool isActive(Client c) => clientHasUpcomingSchedule(c, widget.sessionsByClient[c.id] ?? const [], now);
+    // Ativos primeiro (alfabético), depois inativos (também alfabético) —
+    // em vez de misturados, para que quem ainda tem aulas agendadas fique
+    // sempre mais visível no topo da lista.
     final displayed = [...(_showAll ? widget.allClients : widget.clients)]
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      ..sort((a, b) {
+        final activeCompare = (isActive(b) ? 1 : 0) - (isActive(a) ? 1 : 0);
+        if (activeCompare != 0) return activeCompare;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
     final title = _showAll ? s.allEnrolledTitle : labels.clientPlural;
 
     return SafeArea(
@@ -96,17 +105,12 @@ class _ClientsTabState extends State<ClientsTab> {
                       itemBuilder: (context, index) {
                         final client = displayed[index];
                         final subtitle = client.serviceType.trim().isNotEmpty ? client.serviceType : client.contactEmail;
-                        final isActive = clientHasUpcomingSchedule(
-                          client,
-                          widget.sessionsByClient[client.id] ?? const [],
-                          DateTime.now(),
-                        );
                         return ClientCard(
                           name: client.name,
                           subtitle: subtitle,
                           onTap: () => widget.onOpenClient(client),
                           accentColor: colorForActivityType(client.activityType),
-                          badgeLabel: isActive ? null : s.inactiveBadgeLabel,
+                          badgeLabel: isActive(client) ? null : s.inactiveBadgeLabel,
                         );
                       },
                     ),

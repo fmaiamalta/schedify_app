@@ -38,6 +38,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Idioma'), findsOneWidget); // Settings screen itself, still pt-PT.
+      await tester.ensureVisible(find.text('English'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('English'));
       await tester.pumpAndSettle();
 
@@ -72,6 +74,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Switch workspace activity type to Fitness.
+      await tester.ensureVisible(find.text('Fitness'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Fitness'));
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.close));

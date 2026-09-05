@@ -9,12 +9,14 @@ import '../models.dart';
 class PersistedState {
   final ActivityType activityType;
   final AppLanguage language;
+  final String providerName;
   final List<Client> clients;
   final Map<String, List<SessionRecord>> sessionsByClient;
 
   const PersistedState({
     required this.activityType,
     required this.language,
+    required this.providerName,
     required this.clients,
     required this.sessionsByClient,
   });
@@ -44,6 +46,7 @@ class StorageService {
       return PersistedState(
         activityType: ActivityType.values.byName(json['activityType'] as String? ?? 'education'),
         language: AppLanguage.values.byName(json['language'] as String? ?? 'pt'),
+        providerName: json['providerName'] as String? ?? '',
         clients: clients,
         sessionsByClient: sessionsByClient,
       );
@@ -57,12 +60,14 @@ class StorageService {
   Future<void> save({
     required ActivityType activityType,
     required AppLanguage language,
+    required String providerName,
     required List<Client> clients,
     required Map<String, List<SessionRecord>> sessionsByClient,
   }) async {
     final json = {
       'activityType': activityType.name,
       'language': language.name,
+      'providerName': providerName,
       'clients': clients.map((c) => c.toJson()).toList(),
       'sessionsByClient': {
         for (final entry in sessionsByClient.entries) entry.key: entry.value.map((s) => s.toJson()).toList(),

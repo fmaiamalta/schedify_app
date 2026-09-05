@@ -19,6 +19,7 @@ void main() {
 
     expect(find.text('Escolha o tipo de atividade'), findsOneWidget);
 
+    await tester.enterText(find.byType(TextField), 'Joana Silva');
     await tester.tap(find.text('Educação'));
     await tester.pumpAndSettle();
 

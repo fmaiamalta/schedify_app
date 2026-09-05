@@ -12,6 +12,7 @@ class PaymentsTab extends StatefulWidget {
   final List<Client> clients;
   final List<Client> allClients;
   final Map<String, List<SessionRecord>> sessionsByClient;
+  final String providerName;
   final ValueChanged<Client> onOpenClient;
   final ValueChanged<PaymentCycleGroup> onMarkGroupPaid;
   final ValueChanged<PaymentCycleGroup> onClearGroup;
@@ -24,6 +25,7 @@ class PaymentsTab extends StatefulWidget {
     required this.clients,
     required this.allClients,
     required this.sessionsByClient,
+    required this.providerName,
     required this.onOpenClient,
     required this.onMarkGroupPaid,
     required this.onClearGroup,
@@ -108,6 +110,7 @@ class _PaymentsTabState extends State<PaymentsTab> {
                       labels: labels,
                       s: s,
                       now: now,
+                      providerName: widget.providerName,
                       emptyText: s.noPendingPayments,
                       reportSentKeys: _reportSentKeys,
                       onReportSent: (group) => setState(() => _reportSentKeys.add(_groupKey(group))),
@@ -120,6 +123,7 @@ class _PaymentsTabState extends State<PaymentsTab> {
                       labels: labels,
                       s: s,
                       now: now,
+                      providerName: widget.providerName,
                       emptyText: s.noCompletedPayments,
                       reportSentKeys: _reportSentKeys,
                       onReportSent: (group) => setState(() => _reportSentKeys.add(_groupKey(group))),
@@ -143,6 +147,7 @@ class _GroupList extends StatelessWidget {
   final ActivityLabels labels;
   final AppStrings s;
   final DateTime now;
+  final String providerName;
   final String emptyText;
   final Set<String> reportSentKeys;
   final ValueChanged<PaymentCycleGroup> onReportSent;
@@ -155,6 +160,7 @@ class _GroupList extends StatelessWidget {
     required this.labels,
     required this.s,
     required this.now,
+    required this.providerName,
     required this.emptyText,
     required this.reportSentKeys,
     required this.onReportSent,
@@ -310,7 +316,7 @@ class _GroupList extends StatelessWidget {
   }
 
   void _openReport(BuildContext context, PaymentCycleGroup group) {
-    final message = buildReportMessage(client: group.client, cycle: group, strings: s);
+    final message = buildReportMessage(client: group.client, cycle: group, strings: s, providerName: providerName);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

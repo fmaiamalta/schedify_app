@@ -48,6 +48,7 @@ void main() {
     await storage.save(
       activityType: ActivityType.fitness,
       language: AppLanguage.en,
+      providerName: 'Joana Silva',
       clients: [client],
       sessionsByClient: {
         'c1': [session],
@@ -58,6 +59,7 @@ void main() {
     expect(loaded, isNotNull);
     expect(loaded!.activityType, ActivityType.fitness);
     expect(loaded.language, AppLanguage.en);
+    expect(loaded.providerName, 'Joana Silva');
 
     final loadedClient = loaded.clients.single;
     expect(loadedClient.id, client.id);
@@ -118,7 +120,13 @@ void main() {
       ],
     );
 
-    await storage.save(activityType: ActivityType.fitness, language: AppLanguage.pt, clients: [client], sessionsByClient: {});
+    await storage.save(
+      activityType: ActivityType.fitness,
+      language: AppLanguage.pt,
+      providerName: 'Bruno Costa',
+      clients: [client],
+      sessionsByClient: {},
+    );
     final loaded = await storage.load();
 
     final loadedOverrides = loaded!.clients.single.occurrenceOverrides;

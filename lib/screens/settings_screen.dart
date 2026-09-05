@@ -6,7 +6,8 @@ import '../theme.dart';
 class SettingsResult {
   final ActivityType activityType;
   final AppLanguage language;
-  const SettingsResult({required this.activityType, required this.language});
+  final String providerName;
+  const SettingsResult({required this.activityType, required this.language, required this.providerName});
 }
 
 /// Ecrã de Definições. Devolve um [SettingsResult] via Navigator.pop quando o
@@ -14,8 +15,14 @@ class SettingsResult {
 class SettingsScreen extends StatefulWidget {
   final ActivityType currentActivityType;
   final AppLanguage currentLanguage;
+  final String currentProviderName;
 
-  const SettingsScreen({super.key, required this.currentActivityType, required this.currentLanguage});
+  const SettingsScreen({
+    super.key,
+    required this.currentActivityType,
+    required this.currentLanguage,
+    required this.currentProviderName,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -24,20 +31,33 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late ActivityType _selectedActivity;
   late AppLanguage _selectedLanguage;
+  late final TextEditingController _providerNameController;
 
   @override
   void initState() {
     super.initState();
     _selectedActivity = widget.currentActivityType;
     _selectedLanguage = widget.currentLanguage;
+    _providerNameController = TextEditingController(text: widget.currentProviderName);
+  }
+
+  @override
+  void dispose() {
+    _providerNameController.dispose();
+    super.dispose();
   }
 
   AppStrings get s => AppStrings(_selectedLanguage);
 
   void _close() {
-    final changed = _selectedActivity != widget.currentActivityType || _selectedLanguage != widget.currentLanguage;
+    final providerName = _providerNameController.text.trim();
+    final changed = _selectedActivity != widget.currentActivityType ||
+        _selectedLanguage != widget.currentLanguage ||
+        providerName != widget.currentProviderName;
     Navigator.of(context).pop(
-      changed ? SettingsResult(activityType: _selectedActivity, language: _selectedLanguage) : null,
+      changed
+          ? SettingsResult(activityType: _selectedActivity, language: _selectedLanguage, providerName: providerName)
+          : null,
     );
   }
 
@@ -65,6 +85,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
+            Text(
+              s.providerNameTitle,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.neutralSoft, letterSpacing: 0.5),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              s.providerNameSubtitle,
+              style: const TextStyle(fontSize: 13, color: AppColors.neutralSoft),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(color: AppColors.surfaceWhite, borderRadius: BorderRadius.circular(20)),
+              child: TextField(
+                controller: _providerNameController,
+                decoration: InputDecoration(border: InputBorder.none, hintText: s.providerNameHint),
+                textCapitalization: TextCapitalization.words,
+              ),
+            ),
+            const SizedBox(height: 28),
             Text(
               s.activityTypeTitle,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.neutralSoft, letterSpacing: 0.5),

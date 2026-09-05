@@ -97,6 +97,7 @@ class _StartupGateState extends State<StartupGate> {
         return HomeShell(
           initialActivityType: state.activityType,
           initialLanguage: state.language,
+          initialProviderName: state.providerName,
           initialClients: state.clients,
           initialSessions: state.sessionsByClient,
         );
@@ -105,15 +106,50 @@ class _StartupGateState extends State<StartupGate> {
   }
 }
 
-class ActivitySelectionScreen extends StatelessWidget {
+class ActivitySelectionScreen extends StatefulWidget {
   final AppLanguage initialLanguage;
 
   const ActivitySelectionScreen({super.key, this.initialLanguage = AppLanguage.pt});
 
   @override
-  Widget build(BuildContext context) {
-    final s = AppStrings(initialLanguage);
+  State<ActivitySelectionScreen> createState() => _ActivitySelectionScreenState();
+}
 
+class _ActivitySelectionScreenState extends State<ActivitySelectionScreen> {
+  final _nameController = TextEditingController();
+  bool _showNameError = false;
+
+  AppStrings get s => AppStrings(widget.initialLanguage);
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _selectActivity(ActivityType type) {
+    final providerName = _nameController.text.trim();
+    if (providerName.isEmpty) {
+      setState(() => _showNameError = true);
+      return;
+    }
+    // pushReplacement (não push): a escolha do tipo de atividade é uma
+    // decisão de arranque única, não um ecrã para onde se deva poder
+    // voltar — caso contrário, o botão de recuar (Android) volta a
+    // mostrar o onboarding a partir de qualquer separador principal.
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => HomeShell(
+          initialActivityType: type,
+          initialLanguage: widget.initialLanguage,
+          initialProviderName: providerName,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -123,6 +159,37 @@ class ActivitySelectionScreen extends StatelessWidget {
             children: [
               const AppHeader(),
               const SizedBox(height: 6),
+              Text(
+                s.providerNameTitle,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.neutralSoft, letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                s.providerNameSubtitle,
+                style: const TextStyle(fontSize: 13, color: AppColors.neutralSoft),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceWhite,
+                  borderRadius: BorderRadius.circular(20),
+                  border: _showNameError ? Border.all(color: Colors.redAccent) : null,
+                ),
+                child: TextField(
+                  controller: _nameController,
+                  decoration: InputDecoration(border: InputBorder.none, hintText: s.providerNameHint),
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (_) {
+                    if (_showNameError) setState(() => _showNameError = false);
+                  },
+                ),
+              ),
+              if (_showNameError) ...[
+                const SizedBox(height: 6),
+                Text(s.providerNameRequiredError, style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
+              ],
+              const SizedBox(height: 24),
               Text(
                 s.chooseActivityTitle,
                 style: const TextStyle(fontSize: 31, fontWeight: FontWeight.w800, color: AppColors.neutralDark, height: 1.1),
@@ -140,20 +207,10 @@ class ActivitySelectionScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final type = ActivityType.values[index];
                     final color = colorForActivityType(type);
-                    final title = getLabels(type, initialLanguage).areaName;
+                    final title = getLabels(type, widget.initialLanguage).areaName;
                     return InkWell(
                       borderRadius: BorderRadius.circular(22),
-                      onTap: () {
-                        // pushReplacement (não push): a escolha do tipo de atividade é uma
-                        // decisão de arranque única, não um ecrã para onde se deva poder
-                        // voltar — caso contrário, o botão de recuar (Android) volta a
-                        // mostrar o onboarding a partir de qualquer separador principal.
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => HomeShell(initialActivityType: type, initialLanguage: initialLanguage),
-                          ),
-                        );
-                      },
+                      onTap: () => _selectActivity(type),
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(22)),

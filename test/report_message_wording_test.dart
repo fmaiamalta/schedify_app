@@ -112,4 +112,52 @@ void main() {
     expect(message, contains('workouts'));
     expect(message, isNot(contains('class')));
   });
+
+  group('buildReportMessage — assinatura do prestador de serviço', () {
+    final strings = AppStrings(AppLanguage.pt);
+
+    test('nome do prestador aparece numa linha própria a seguir a "Cumprimentos."', () {
+      final client = _client(ActivityType.education, serviceType: 'Matemática');
+      final message = buildReportMessage(
+        client: client,
+        cycle: _cycle(client),
+        strings: strings,
+        providerName: 'Joana Silva',
+      );
+
+      expect(message, endsWith('Cumprimentos.\nJoana Silva'));
+    });
+
+    test('sem nome de prestador (ainda não definido nas Definições): sem linha extra, como antes', () {
+      final client = _client(ActivityType.education, serviceType: 'Matemática');
+      final message = buildReportMessage(client: client, cycle: _cycle(client), strings: strings);
+
+      expect(message, endsWith('Cumprimentos.'));
+    });
+
+    test('nome do prestador só com espaços em branco: tratado como vazio', () {
+      final client = _client(ActivityType.education, serviceType: 'Matemática');
+      final message = buildReportMessage(
+        client: client,
+        cycle: _cycle(client),
+        strings: strings,
+        providerName: '   ',
+      );
+
+      expect(message, endsWith('Cumprimentos.'));
+    });
+
+    test('em inglês, a assinatura aparece depois de "Best regards."', () {
+      final englishStrings = AppStrings(AppLanguage.en);
+      final client = _client(ActivityType.education, serviceType: 'Maths');
+      final message = buildReportMessage(
+        client: client,
+        cycle: _cycle(client),
+        strings: englishStrings,
+        providerName: 'Joana Silva',
+      );
+
+      expect(message, endsWith('Best regards.\nJoana Silva'));
+    });
+  });
 }

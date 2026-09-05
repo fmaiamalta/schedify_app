@@ -16,6 +16,7 @@ import 'theme.dart';
 class HomeShell extends StatefulWidget {
   final ActivityType initialActivityType;
   final AppLanguage initialLanguage;
+  final String initialProviderName;
   final List<Client> initialClients;
   final Map<String, List<SessionRecord>> initialSessions;
 
@@ -23,6 +24,7 @@ class HomeShell extends StatefulWidget {
     super.key,
     required this.initialActivityType,
     this.initialLanguage = AppLanguage.pt,
+    this.initialProviderName = '',
     this.initialClients = const [],
     this.initialSessions = const {},
   });
@@ -43,6 +45,7 @@ class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
   late ActivityType _activityType;
   late AppLanguage _language;
+  late String _providerName;
   late List<Client> _clients;
   late Map<String, List<SessionRecord>> _sessionsByClient;
 
@@ -53,6 +56,7 @@ class _HomeShellState extends State<HomeShell> {
     super.initState();
     _activityType = widget.initialActivityType;
     _language = widget.initialLanguage;
+    _providerName = widget.initialProviderName;
     _clients = [...widget.initialClients];
     _sessionsByClient = {for (final entry in widget.initialSessions.entries) entry.key: [...entry.value]};
   }
@@ -69,6 +73,7 @@ class _HomeShellState extends State<HomeShell> {
     _storage.save(
       activityType: _activityType,
       language: _language,
+      providerName: _providerName,
       clients: _clients,
       sessionsByClient: _sessionsByClient,
     );
@@ -157,13 +162,18 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _openSettings() async {
     final result = await Navigator.of(context).push<SettingsResult>(
       MaterialPageRoute(
-        builder: (_) => SettingsScreen(currentActivityType: _activityType, currentLanguage: _language),
+        builder: (_) => SettingsScreen(
+          currentActivityType: _activityType,
+          currentLanguage: _language,
+          currentProviderName: _providerName,
+        ),
       ),
     );
     if (result != null) {
       setState(() {
         _activityType = result.activityType;
         _language = result.language;
+        _providerName = result.providerName;
       });
       currentAppLanguage.value = result.language;
       _persist();
@@ -292,6 +302,7 @@ class _HomeShellState extends State<HomeShell> {
         clients: _workspaceClients,
         allClients: _clients,
         sessionsByClient: _sessionsByClient,
+        providerName: _providerName,
         onOpenClient: _openClientDetail,
         onMarkGroupPaid: _markGroupPaid,
         onClearGroup: _clearGroup,

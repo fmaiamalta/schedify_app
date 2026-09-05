@@ -15,6 +15,7 @@ String buildReportMessage({
   required Client client,
   required PaymentCycleGroup cycle,
   required AppStrings strings,
+  String providerName = '',
 }) {
   final sortedSessions = [...cycle.sessions]..sort((a, b) => a.scheduledFor.compareTo(b.scheduledFor));
   final sessionDatesLabel = sortedSessions.map((s) => _formatDayMonth(s.scheduledFor)).join(', ');
@@ -33,6 +34,7 @@ String buildReportMessage({
     totalAmountLabel: totalLabel,
     sessionPluralLower: labels.sessionPlural.toLowerCase(),
     masculine: labels.sessionIsMasculine,
+    providerName: providerName.trim(),
   );
 }
 
