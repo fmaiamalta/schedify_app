@@ -51,9 +51,26 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+# Config para o pacote flutter_launcher_icons (dev_dependency acima) — gera
+# os ícones reais da app (Android + iOS) a partir do logótipo, substituindo
+# o placeholder genérico do Flutter. Corre com:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/schedify_logo_redondo.png"
+  # Fundo branco sólido: o logótipo já é um círculo com fundo branco, por
+  # isso o "adaptive icon" do Android (que recorta a forma) fica consistente
+  # com o ícone "legacy", e a versão iOS (que não permite transparência)
+  # fica sem cantos/anéis transparentes visíveis.
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/schedify_icon_foreground.png"
+  remove_alpha_ios: true
 
 # The following section is specific to Flutter packages.
 flutter:
