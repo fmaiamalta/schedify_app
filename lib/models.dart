@@ -33,6 +33,27 @@ Locale localeFor(AppLanguage language) => Locale(language == AppLanguage.en ? 'e
 /// rota específica.
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
+/// Mostra um SnackBar através de [rootScaffoldMessengerKey] e agenda,
+/// independentemente, a sua remoção ao fim da duração pedida.
+///
+/// Mesmo usando a chave global (ver acima), foi reportado em produção (Flutter
+/// Web, testado em Safari/Mac e Safari/iOS, reproduzido em janela privada —
+/// ou seja, não era cache) um SnackBar que nunca desaparecia sozinho. O
+/// temporizador de auto-dismiss do próprio SnackBar depende da sua animação de
+/// entrada terminar; nunca se isolou a causa exata no Flutter Web, por isso
+/// esta função não depende dela — agenda sempre, em paralelo, um
+/// `Future.delayed` que remove o SnackBar atual ao fim de [duration],
+/// funcionando como rede de segurança independente da mecânica interna.
+void showAppSnackBar(SnackBar snackBar) {
+  final messenger = rootScaffoldMessengerKey.currentState;
+  if (messenger == null) return;
+  messenger.removeCurrentSnackBar();
+  messenger.showSnackBar(snackBar);
+  Future.delayed(snackBar.duration, () {
+    rootScaffoldMessengerKey.currentState?.hideCurrentSnackBar();
+  });
+}
+
 /// Frequência de pagamento (ciclo de acumulação/relatório em Pagamentos).
 enum PaymentType {
   avulso,

@@ -127,7 +127,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _applyClientUpdate(updatedClient);
 
     if (!mounted) return;
-    rootScaffoldMessengerKey.currentState!.showSnackBar(
+    showAppSnackBar(
       SnackBar(
         content: Text(s.occurrenceRescheduledSnackbar(
           labels.sessionSingular,
@@ -175,7 +175,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _applyClientUpdate(updatedClient);
 
     if (!mounted) return;
-    rootScaffoldMessengerKey.currentState!.showSnackBar(
+    showAppSnackBar(
       SnackBar(content: Text(s.occurrenceCancelledSnackbar(labels.sessionSingular, client.name, masculine: labels.sessionIsMasculine))),
     );
   }
@@ -187,7 +187,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
     _applyClientUpdate(updatedClient);
 
-    rootScaffoldMessengerKey.currentState!.showSnackBar(
+    showAppSnackBar(
       SnackBar(content: Text(s.occurrenceRevertedSnackbar(client.name))),
     );
   }

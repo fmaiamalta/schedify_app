@@ -485,7 +485,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
     } else {
       final required = requiredWeekdayCount(_sessionFrequency);
       if (_selectedWeekdays.length != required) {
-        rootScaffoldMessengerKey.currentState!.showSnackBar(SnackBar(content: Text(s.selectExactlyDays(required))));
+        showAppSnackBar(SnackBar(content: Text(s.selectExactlyDays(required))));
         return;
       }
 
@@ -497,7 +497,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
 
       final startMismatch = validateDateMatchesWeekdays(startDate, slots);
       if (startMismatch != null) {
-        rootScaffoldMessengerKey.currentState!.showSnackBar(
+        showAppSnackBar(
           SnackBar(
             content: Text(
               s.startDateError(_weekdayMismatchMessage(startMismatch)),
@@ -507,13 +507,13 @@ class _AddClientScreenState extends State<AddClientScreen> {
         return;
       }
       if (endDate == null && !_noEndDate) {
-        rootScaffoldMessengerKey.currentState!.showSnackBar(SnackBar(content: Text(s.indicateEndDate)));
+        showAppSnackBar(SnackBar(content: Text(s.indicateEndDate)));
         return;
       }
       if (endDate != null) {
         final endMismatch = validateDateMatchesWeekdays(endDate, slots);
         if (endMismatch != null) {
-          rootScaffoldMessengerKey.currentState!.showSnackBar(
+          showAppSnackBar(
             SnackBar(
               content: Text(
                 s.endDateError(_weekdayMismatchMessage(endMismatch)),

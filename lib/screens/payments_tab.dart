@@ -345,7 +345,7 @@ class _GroupList extends StatelessWidget {
                               final sent = await sendViaWhatsApp(group.client.contactPhone, message);
                               if (sent) onReportSent(group);
                               if (context.mounted && !sent) {
-                                rootScaffoldMessengerKey.currentState!.showSnackBar(
+                                showAppSnackBar(
                                   SnackBar(content: Text(s.whatsappOpenFailed)),
                                 );
                               }
@@ -368,7 +368,7 @@ class _GroupList extends StatelessWidget {
                               );
                               if (sent) onReportSent(group);
                               if (context.mounted && !sent) {
-                                rootScaffoldMessengerKey.currentState!.showSnackBar(
+                                showAppSnackBar(
                                   SnackBar(content: Text(s.emailOpenFailed)),
                                 );
                               }
