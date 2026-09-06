@@ -331,8 +331,11 @@ class _GroupList extends StatelessWidget {
             children: [
               Text(s.reportTitle(group.client.name), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.neutralDark)),
               const SizedBox(height: 4),
-              Text(s.reportSummary(group.totalSessions, labels.sessionPlural.toLowerCase(), '${group.totalAmount.toStringAsFixed(2)}€'),
-                  style: const TextStyle(color: AppColors.neutralSoft)),
+              Text(
+                s.reportSummary(group.totalSessions, labels.sessionSingular.toLowerCase(), labels.sessionPlural.toLowerCase(),
+                    '${group.totalAmount.toStringAsFixed(2)}€'),
+                style: const TextStyle(color: AppColors.neutralSoft),
+              ),
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,

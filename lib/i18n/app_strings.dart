@@ -31,7 +31,9 @@ class AppStrings {
       _t('Não há $sessionPluralLower previstas para o resto desta semana.', 'No $sessionPluralLower planned for the rest of this week.');
   String get statistics => _t('Estatísticas', 'Statistics');
   String get paymentsReceived => _t('Pagamentos efetuados', 'Payments received');
-  String registeredCountLabel(int count) => _t('$count registos efetuados', '$count records made');
+  String registeredCountLabel(int count) => count == 1
+      ? _t('1 registo efetuado', '1 record made')
+      : _t('$count registos efetuados', '$count records made');
   String get thisActivityFilter => _t('Nesta atividade', 'This activity');
   String get allEnrolledFilter => _t('Todos', 'All');
   String get allEnrolledTitle => _t('Todos os Inscritos', 'All Enrolled');
@@ -53,7 +55,8 @@ class AppStrings {
   String get undo => _t('Anular', 'Undo');
 
   // Alunos / lista de clientes
-  String countRegistered(int count) => _t('$count registados', '$count registered');
+  String countRegistered(int count) =>
+      count == 1 ? _t('1 registado', '1 registered') : _t('$count registados', '$count registered');
   String noneRegisteredYet(String clientPluralLower) =>
       _t('Ainda não há $clientPluralLower registados', 'No $clientPluralLower yet');
   String startByAdding(String clientSingularLower) => _t(
@@ -62,13 +65,16 @@ class AppStrings {
       );
 
   // Disciplinas / subjects
-  String subjectsCreated(int count, {bool masculine = false}) =>
-      _t('$count ${masculine ? 'registados' : 'registadas'}', '$count registered');
+  String subjectsCreated(int count, {bool masculine = false}) => count == 1
+      ? _t(masculine ? '1 registado' : '1 registada', '1 registered')
+      : _t('$count ${masculine ? 'registados' : 'registadas'}', '$count registered');
   String noSubjectsYet(String serviceTypeLower, String clientSingularLower) => _t(
         'Ainda não há $serviceTypeLower criadas.\nSão criadas automaticamente ao adicionar um(a) $clientSingularLower.',
         'No $serviceTypeLower yet.\nThey are created automatically when you add a $clientSingularLower.',
       );
-  String enrolledCount(int count, String clientPluralLower) => _t('$count $clientPluralLower inscrito(s)', '$count $clientPluralLower enrolled');
+  String enrolledCount(int count, String clientSingularLower, String clientPluralLower) => count == 1
+      ? _t('1 $clientSingularLower inscrito', '1 $clientSingularLower enrolled')
+      : _t('$count $clientPluralLower inscritos', '$count $clientPluralLower enrolled');
   String get close => _t('Fechar', 'Close');
 
   // Horário (calendário)
@@ -97,7 +103,7 @@ class AppStrings {
       _t('Cancelar ${sessionSingularLower.trim()}?', 'Cancel $sessionSingularLower?');
   String confirmCancelOccurrenceBody(String sessionSingularLower, String name, String dateLabel, {bool masculine = false}) => _t(
         '${masculine ? 'Este' : 'Esta'} $sessionSingularLower de $name em $dateLabel fica ${masculine ? 'cancelado' : 'cancelada'}. '
-        'Podes reverter mais tarde.',
+        'Pode reverter mais tarde.',
         'This $sessionSingularLower for $name on $dateLabel will be cancelled. You can revert later.',
       );
   String occurrenceRescheduledSnackbar(String sessionSingular, String name, String newDateLabel, {bool masculine = false}) => _t(
@@ -130,7 +136,7 @@ class AppStrings {
   String get done => _t('Concluir', 'Done');
   String get discardChangesTitle => _t('Descartar alterações?', 'Discard changes?');
   String get discardChangesBody =>
-      _t('Ainda não guardaste este formulário. Se saíres agora, perdes o que preencheste.',
+      _t('Ainda não guardou este formulário. Se sair agora, perde o que preencheu.',
           'You haven\'t saved this form yet. If you leave now, what you filled in will be lost.');
   String get discard => _t('Descartar', 'Discard');
   String get confirm => _t('Confirmar', 'Confirm');
@@ -140,14 +146,16 @@ class AppStrings {
         'Permanently remove the payment for $name ($period) from history?',
       );
   String reportTitle(String name) => _t('Relatório — $name', 'Report — $name');
-  String reportSummary(int count, String sessionPluralLower, String amount) =>
-      _t('$count $sessionPluralLower · $amount', '$count $sessionPluralLower · $amount');
+  String reportSummary(int count, String sessionSingularLower, String sessionPluralLower, String amount) {
+    final noun = count == 1 ? sessionSingularLower : sessionPluralLower;
+    return _t('$count $noun · $amount', '$count $noun · $amount');
+  }
   String get whatsapp => 'WhatsApp';
   String get email => _t('Email', 'Email');
   String get whatsappOpenFailed => _t('Não foi possível abrir o WhatsApp.', 'Could not open WhatsApp.');
   String get emailOpenFailed => _t('Não foi possível abrir o cliente de email.', 'Could not open the email client.');
   String get reportNotSentWarning => _t(
-        'Ainda não enviaste o relatório deste período. Podes marcar como pago à mesma.',
+        'Ainda não enviou o relatório deste período. Pode marcar como pago à mesma.',
         'You haven\'t sent the report for this period yet. You can still mark it as paid.',
       );
   String get globalSummary => _t('Resumo Global', 'Global summary');
@@ -159,8 +167,8 @@ class AppStrings {
         'Usado como assinatura nos relatórios enviados por WhatsApp/email.',
         'Used as the signature on reports sent via WhatsApp/email.',
       );
-  String get providerNameHint => _t('O teu nome (ou o do negócio)', 'Your name (or your business name)');
-  String get providerNameRequiredError => _t('Indica o teu nome para continuares.', 'Enter your name to continue.');
+  String get providerNameHint => _t('O seu nome (ou o do negócio)', 'Your name (or your business name)');
+  String get providerNameRequiredError => _t('Indique o seu nome para continuar.', 'Enter your name to continue.');
   String get activityTypeTitle => _t('Tipo de atividade', 'Activity type');
   String get activityTypeSubtitle => _t('Determina a nomenclatura usada em toda a aplicação.', 'Determines the wording used throughout the app.');
   String get languageTitle => _t('Idioma', 'Language');

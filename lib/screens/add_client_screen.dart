@@ -623,7 +623,6 @@ class _AddClientScreenState extends State<AddClientScreen> {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
             child: Form(
               key: _formKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

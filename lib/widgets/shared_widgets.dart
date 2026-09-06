@@ -472,6 +472,7 @@ class SchedifyTextField extends StatelessWidget {
       keyboardType: keyboardType,
       maxLines: maxLines,
       validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       inputFormatters: inputFormatters,
       onChanged: onChanged,
       style: const TextStyle(fontSize: 16, color: AppColors.neutralDark),

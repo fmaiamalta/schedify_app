@@ -138,7 +138,10 @@ class _SubjectsTabState extends State<SubjectsTab> {
             children: [
               Text(subject.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.neutralDark)),
               const SizedBox(height: 4),
-              Text(s.enrolledCount(subject.clients.length, labels.clientPlural.toLowerCase()), style: const TextStyle(color: AppColors.neutralSoft)),
+              Text(
+                s.enrolledCount(subject.clients.length, labels.clientSingular.toLowerCase(), labels.clientPlural.toLowerCase()),
+                style: const TextStyle(color: AppColors.neutralSoft),
+              ),
               const SizedBox(height: 16),
               ...([...subject.clients]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()))).map(
                 (client) => Padding(
@@ -283,7 +286,7 @@ class _SubjectCard extends StatelessWidget {
                   Text(subject.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.neutralDark)),
                   const SizedBox(height: 4),
                   Text(
-                    s.enrolledCount(subject.clients.length, labels.clientPlural.toLowerCase()),
+                    s.enrolledCount(subject.clients.length, labels.clientSingular.toLowerCase(), labels.clientPlural.toLowerCase()),
                     style: const TextStyle(fontSize: 14, color: AppColors.neutralSoft),
                   ),
                 ],
