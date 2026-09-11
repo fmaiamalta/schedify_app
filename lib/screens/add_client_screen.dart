@@ -693,6 +693,8 @@ class _AddClientScreenState extends State<AddClientScreen> {
                           label: s.emailLabel,
                           keyboardType: TextInputType.emailAddress,
                           validator: _validateEmail,
+                          textCapitalization: TextCapitalization.none,
+                          autocorrect: false,
                         ),
                         const SizedBox(height: 14),
                         SchedifyTextField(

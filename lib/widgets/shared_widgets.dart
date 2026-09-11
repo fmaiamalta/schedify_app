@@ -448,6 +448,8 @@ class SchedifyTextField extends StatelessWidget {
   final FocusNode? focusNode;
   final Key? fieldKey;
   final String? helperText;
+  final TextCapitalization textCapitalization;
+  final bool autocorrect;
 
   const SchedifyTextField({
     super.key,
@@ -461,6 +463,8 @@ class SchedifyTextField extends StatelessWidget {
     this.focusNode,
     this.fieldKey,
     this.helperText,
+    this.textCapitalization = TextCapitalization.none,
+    this.autocorrect = true,
   });
 
   @override
@@ -475,6 +479,8 @@ class SchedifyTextField extends StatelessWidget {
       autovalidateMode: AutovalidateMode.onUserInteraction,
       inputFormatters: inputFormatters,
       onChanged: onChanged,
+      textCapitalization: textCapitalization,
+      autocorrect: autocorrect,
       style: const TextStyle(fontSize: 16, color: AppColors.neutralDark),
       decoration: schedifyInputDecoration(label, helperText: helperText),
     );
