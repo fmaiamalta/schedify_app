@@ -118,7 +118,7 @@ class DashboardTab extends StatelessWidget {
                   ? Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        s.noneScheduledThisWeek(labels.sessionPlural.toLowerCase()),
+                        s.noneScheduledThisWeek(labels.sessionPlural.toLowerCase(), masculine: labels.sessionIsMasculine),
                         style: const TextStyle(fontSize: 15, color: AppColors.neutralSoft, height: 1.4),
                       ),
                     )

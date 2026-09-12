@@ -25,6 +25,19 @@ void main() {
     });
   });
 
+  group('noneScheduledThisWeek — concordância de género em pt-PT', () {
+    test('feminino: "previstas"', () {
+      expect(s.noneScheduledThisWeek('aulas'), 'Não há aulas previstas para o resto desta semana.');
+    });
+
+    test('masculino (Treinos, Fitness): "previstos"', () {
+      expect(
+        s.noneScheduledThisWeek('treinos', masculine: true),
+        'Não há treinos previstos para o resto desta semana.',
+      );
+    });
+  });
+
   test('só Fitness tem sessionIsMasculine true; as restantes são femininas', () {
     for (final type in ActivityType.values) {
       final labels = getLabels(type);

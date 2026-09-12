@@ -27,8 +27,10 @@ class AppStrings {
   String registerLabel(String noun) => _t('Registar $noun', 'Register $noun');
   String get schedule => _t('Horário', 'Schedule');
   String upcomingThisWeek(String sessionPlural) => _t('Próximas $sessionPlural (esta semana)', 'Upcoming $sessionPlural (this week)');
-  String noneScheduledThisWeek(String sessionPluralLower) =>
-      _t('Não há $sessionPluralLower previstas para o resto desta semana.', 'No $sessionPluralLower planned for the rest of this week.');
+  String noneScheduledThisWeek(String sessionPluralLower, {bool masculine = false}) => _t(
+        'Não há $sessionPluralLower ${masculine ? 'previstos' : 'previstas'} para o resto desta semana.',
+        'No $sessionPluralLower planned for the rest of this week.',
+      );
   String get statistics => _t('Estatísticas', 'Statistics');
   String get paymentsReceived => _t('Pagamentos efetuados', 'Payments received');
   String registeredCountLabel(int count) => count == 1

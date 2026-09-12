@@ -232,7 +232,10 @@ class _GroupList extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   _Chip(text: group.periodLabel(s.language)),
-                  _Chip(text: '${group.totalSessions} ${labels.sessionPlural.toLowerCase()}'),
+                  _Chip(
+                    text: '${group.totalSessions} '
+                        '${(group.totalSessions == 1 ? labels.sessionSingular : labels.sessionPlural).toLowerCase()}',
+                  ),
                   _Chip(
                     text: closed ? s.cycleClosed : s.accumulating,
                     background: closed ? AppColors.brandBlueSoft : AppColors.surfaceSoft,
