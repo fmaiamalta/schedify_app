@@ -77,4 +77,11 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_storageKey, jsonEncode(json));
   }
+
+  /// Apaga por completo os dados guardados (alunos/clientes, sessões e
+  /// pagamentos) — usado pelo botão "Repor aplicação" em Definições.
+  Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
+  }
 }

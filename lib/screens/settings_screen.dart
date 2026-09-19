@@ -16,12 +16,14 @@ class SettingsScreen extends StatefulWidget {
   final ActivityType currentActivityType;
   final AppLanguage currentLanguage;
   final String currentProviderName;
+  final Future<void> Function() onResetApp;
 
   const SettingsScreen({
     super.key,
     required this.currentActivityType,
     required this.currentLanguage,
     required this.currentProviderName,
+    required this.onResetApp,
   });
 
   @override
@@ -59,6 +61,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? SettingsResult(activityType: _selectedActivity, language: _selectedLanguage, providerName: providerName)
           : null,
     );
+  }
+
+  /// Ação destrutiva e imediata (não segue o contrato de pop com
+  /// SettingsResult): confirma com o utilizador e, se aceite, entrega logo o
+  /// reset ao HomeShell — que substitui toda a stack de navegação, incluindo
+  /// este ecrã, por isso nada corre depois do await.
+  Future<void> _confirmResetApp() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s.confirmResetAppTitle),
+        content: Text(s.confirmResetAppBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(s.cancel)),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(s.confirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await widget.onResetApp();
   }
 
   @override
@@ -178,19 +203,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 14),
             Container(
               decoration: BoxDecoration(color: AppColors.surfaceWhite, borderRadius: BorderRadius.circular(20)),
-              child: ListTile(
-                leading: const Icon(Icons.cloud_upload_outlined, color: AppColors.neutralSoft),
-                title: Text(s.backupTitle),
-                subtitle: Text(s.backupSubtitle),
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: AppColors.taupeSoft, borderRadius: BorderRadius.circular(10)),
-                  child: Text(
-                    s.premium,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.taupe),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.cloud_upload_outlined, color: AppColors.neutralSoft),
+                    title: Text(s.backupTitle),
+                    subtitle: Text(s.backupSubtitle),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: AppColors.taupeSoft, borderRadius: BorderRadius.circular(10)),
+                      child: Text(
+                        s.premium,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.taupe),
+                      ),
+                    ),
+                    enabled: false,
                   ),
-                ),
-                enabled: false,
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
+                    title: Text(s.resetAppTitle, style: const TextStyle(color: Colors.redAccent)),
+                    subtitle: Text(s.resetAppSubtitle),
+                    onTap: _confirmResetApp,
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 28),

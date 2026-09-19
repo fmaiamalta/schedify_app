@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'i18n/app_strings.dart';
+import 'main.dart';
 import 'models.dart';
 import 'screens/add_client_screen.dart';
 import 'screens/client_detail_screen.dart';
@@ -166,6 +167,7 @@ class _HomeShellState extends State<HomeShell> {
           currentActivityType: _activityType,
           currentLanguage: _language,
           currentProviderName: _providerName,
+          onResetApp: _resetApp,
         ),
       ),
     );
@@ -178,6 +180,20 @@ class _HomeShellState extends State<HomeShell> {
       currentAppLanguage.value = result.language;
       _persist();
     }
+  }
+
+  /// Apaga todos os dados guardados e volta ao ecrã de primeira utilização —
+  /// chamado a partir de Definições ("Repor aplicação"). Substitui a stack de
+  /// navegação inteira (incluindo Definições e este próprio HomeShell) por um
+  /// novo StartupGate, que já trata sozinho de mostrar a seleção de tipo de
+  /// atividade quando não há dados guardados.
+  Future<void> _resetApp() async {
+    await _storage.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const StartupGate()),
+      (route) => false,
+    );
   }
 
   void _registerOccurrence(PlannedOccurrence occurrence) {

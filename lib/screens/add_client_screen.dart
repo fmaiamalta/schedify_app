@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import '../i18n/app_strings.dart';
 import '../models.dart';
+import '../services/contact_import_service.dart';
 import '../services/schedule_logic.dart';
 import '../theme.dart';
 import '../widgets/shared_widgets.dart';
@@ -443,6 +446,147 @@ class _AddClientScreenState extends State<AddClientScreen> {
     return null;
   }
 
+  /// No Android, ler o contacto por trás do seletor nativo exige
+  /// READ_CONTACTS (no iOS o próprio seletor da Apple já devolve os dados
+  /// sem pedir nenhuma permissão). Mostra primeiro um diálogo a explicar
+  /// porquê, e só depois pede a permissão ao sistema.
+  Future<bool> _ensureContactsAccessIfNeeded() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+
+    final alreadyGranted = await FlutterContacts.permissions.has(
+      PermissionType.read,
+    );
+    if (alreadyGranted) return true;
+
+    if (!mounted) return false;
+    final wantsToAllow = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s.contactsPermissionRationaleTitle),
+        content: Text(s.contactsPermissionRationaleBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(s.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(s.contactsPermissionRationaleAction),
+          ),
+        ],
+      ),
+    );
+    if (wantsToAllow != true) return false;
+
+    final status = await FlutterContacts.permissions.request(
+      PermissionType.read,
+    );
+    return status == PermissionStatus.granted;
+  }
+
+  /// Mostra uma bottom sheet simples para escolher entre vários valores do
+  /// mesmo tipo (vários telefones ou vários emails do mesmo contacto) — sem
+  /// isto, importar escolheria sempre o primeiro às cegas.
+  Future<String?> _pickOneOf({
+    required String title,
+    required List<MapEntry<String, String>> options,
+  }) async {
+    if (options.length <= 1) return options.isEmpty ? null : options.first.key;
+    return showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.surfaceWhite,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            for (final option in options)
+              ListTile(
+                title: Text(option.key),
+                subtitle: option.value.isEmpty ? null : Text(option.value),
+                onTap: () => Navigator.of(context).pop(option.key),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _importFromContacts() async {
+    final granted = await _ensureContactsAccessIfNeeded();
+    if (!granted) {
+      showAppSnackBar(
+        SnackBar(content: Text(s.contactsPermissionDeniedMessage)),
+      );
+      return;
+    }
+
+    Contact? contact;
+    try {
+      contact = await FlutterContacts.native.showPicker(
+        properties: {ContactProperty.phone, ContactProperty.email},
+      );
+    } on Exception {
+      showAppSnackBar(SnackBar(content: Text(s.contactImportErrorMessage)));
+      return;
+    }
+    if (contact == null) return;
+
+    final phones = contact.phones;
+    final emails = contact.emails;
+    if (phones.isEmpty && emails.isEmpty) {
+      showAppSnackBar(SnackBar(content: Text(s.contactHasNoContactInfo)));
+      return;
+    }
+
+    if (!mounted) return;
+
+    if (phones.isNotEmpty) {
+      final chosenPhone = await _pickOneOf(
+        title: s.choosePhoneTitle,
+        options: [
+          for (final phone in phones)
+            MapEntry(phone.number, phone.label.label.name),
+        ],
+      );
+      if (chosenPhone != null) {
+        final normalized = normalizeImportedPhone(chosenPhone);
+        if (normalized.isNotEmpty) _phoneController.text = normalized;
+      }
+    }
+
+    if (!mounted) return;
+
+    if (emails.isNotEmpty) {
+      final chosenEmail = await _pickOneOf(
+        title: s.chooseEmailTitle,
+        options: [
+          for (final email in emails)
+            MapEntry(email.address, email.label.label.name),
+        ],
+      );
+      if (chosenEmail != null) {
+        _emailController.text = chosenEmail.trim();
+      }
+    }
+  }
+
   String? _validateRate(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return s.requiredField;
@@ -666,7 +810,23 @@ class _AddClientScreenState extends State<AddClientScreen> {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  FormSectionTitle(title: s.infoSection(singularLower)),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(child: FormSectionTitle(title: s.infoSection(singularLower))),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: _importFromContacts,
+                        icon: const Icon(Icons.contact_page_outlined, size: 18),
+                        label: Text(s.importContactAction),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(18),

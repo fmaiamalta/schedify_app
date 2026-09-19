@@ -180,6 +180,14 @@ class AppStrings {
   String get dataSection => _t('Dados', 'Data');
   String get backupTitle => _t('Fazer backup da informação', 'Back up information');
   String get backupSubtitle => _t('Cópia de segurança dos dados na nuvem.', 'Cloud backup of your data.');
+  String get resetAppTitle => _t('Repor aplicação', 'Reset app');
+  String get resetAppSubtitle =>
+      _t('Apaga todos os alunos/clientes, sessões e pagamentos.', 'Deletes all clients, sessions, and payments.');
+  String get confirmResetAppTitle => _t('Repor tudo?', 'Reset everything?');
+  String get confirmResetAppBody => _t(
+        'Esta ação apaga permanentemente todos os alunos/clientes e o histórico de sessões e pagamentos desta aplicação. A app volta ao estado de primeira utilização. Não pode ser desfeita.',
+        'This permanently deletes all clients and all session/payment history in this app. The app returns to its first-time setup state. This cannot be undone.',
+      );
   String get premium => 'PREMIUM';
   String get about => _t('Acerca', 'About');
   String get version => _t('Versão', 'Version');
@@ -212,6 +220,20 @@ class AppStrings {
         'Include the country code (e.g. +1) for WhatsApp to work correctly.',
       );
   String get notesLabel => _t('Notas', 'Notes');
+  String get importContactAction => _t('Importar contacto', 'Import contact');
+  String get choosePhoneTitle => _t('Escolher número', 'Choose phone number');
+  String get chooseEmailTitle => _t('Escolher email', 'Choose email address');
+  String get contactHasNoContactInfo =>
+      _t('Este contacto não tem telefone nem email.', 'This contact has no phone number or email.');
+  String get contactsPermissionRationaleTitle => _t('Aceder aos contactos', 'Access contacts');
+  String get contactsPermissionRationaleBody => _t(
+        'Para preencher o telefone e o email automaticamente, o Android precisa de acesso aos contactos — só é usado o contacto que escolher.',
+        'To auto-fill the phone and email, Android needs contacts access — only the contact you pick is used.',
+      );
+  String get contactsPermissionRationaleAction => _t('Permitir', 'Allow');
+  String get contactsPermissionDeniedMessage =>
+      _t('Sem acesso aos contactos. Pode preencher os campos manualmente.', 'Contacts access denied. You can still fill in the fields manually.');
+  String get contactImportErrorMessage => _t('Não foi possível importar o contacto.', 'Could not import the contact.');
   String newSubject(String subjectLower) => _t('Nova $subjectLower', 'New $subjectLower');
   String get startDateLabel => _t('Data de início', 'Start date');
   String get endDateLabel => _t('Data de fim', 'End date');
