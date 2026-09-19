@@ -1127,13 +1127,16 @@ class _AddClientScreenState extends State<AddClientScreen> {
                                 },
                         ),
                         const SizedBox(height: 8),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          value: _hasVat,
-                          onChanged: (value) => setState(() => _hasVat = value),
-                          title: Text(s.vatSwitchLabel),
-                          activeThumbColor: AppColors.brandBlue,
-                          activeTrackColor: AppColors.brandBlueSoft,
+                        Material(
+                          type: MaterialType.transparency,
+                          child: SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            value: _hasVat,
+                            onChanged: (value) => setState(() => _hasVat = value),
+                            title: Text(s.vatSwitchLabel),
+                            activeThumbColor: AppColors.brandBlue,
+                            activeTrackColor: AppColors.brandBlueSoft,
+                          ),
                         ),
                       ],
                     ),

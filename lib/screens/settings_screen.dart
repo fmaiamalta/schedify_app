@@ -141,22 +141,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 14),
             Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(color: AppColors.surfaceWhite, borderRadius: BorderRadius.circular(20)),
-              child: Column(
-                children: ActivityType.values.map((type) {
-                  final labels = getLabels(type, _selectedLanguage);
-                  final selected = _selectedActivity == type;
-                  return RadioListTile<ActivityType>(
-                    value: type,
-                    groupValue: _selectedActivity,
-                    onChanged: (value) {
-                      if (value != null) setState(() => _selectedActivity = value);
-                    },
-                    activeColor: colorForActivityType(type),
-                    secondary: Icon(iconForActivityType(type), color: colorForActivityType(type)),
-                    title: Text(labels.areaName, style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
-                  );
-                }).toList(),
+              child: Material(
+                type: MaterialType.transparency,
+                child: Column(
+                  children: ActivityType.values.map((type) {
+                    final labels = getLabels(type, _selectedLanguage);
+                    final selected = _selectedActivity == type;
+                    return RadioListTile<ActivityType>(
+                      value: type,
+                      groupValue: _selectedActivity,
+                      onChanged: (value) {
+                        if (value != null) setState(() => _selectedActivity = value);
+                      },
+                      activeColor: colorForActivityType(type),
+                      secondary: Icon(iconForActivityType(type), color: colorForActivityType(type)),
+                      title: Text(labels.areaName, style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
             const SizedBox(height: 28),
@@ -171,28 +175,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 14),
             Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(color: AppColors.surfaceWhite, borderRadius: BorderRadius.circular(20)),
-              child: Column(
-                children: [
-                  RadioListTile<AppLanguage>(
-                    value: AppLanguage.pt,
-                    groupValue: _selectedLanguage,
-                    onChanged: (value) {
-                      if (value != null) setState(() => _selectedLanguage = value);
-                    },
-                    activeColor: AppColors.brandBlue,
-                    title: Text(s.portuguese, style: TextStyle(fontWeight: _selectedLanguage == AppLanguage.pt ? FontWeight.w700 : FontWeight.w500)),
-                  ),
-                  RadioListTile<AppLanguage>(
-                    value: AppLanguage.en,
-                    groupValue: _selectedLanguage,
-                    onChanged: (value) {
-                      if (value != null) setState(() => _selectedLanguage = value);
-                    },
-                    activeColor: AppColors.brandBlue,
-                    title: Text(s.english, style: TextStyle(fontWeight: _selectedLanguage == AppLanguage.en ? FontWeight.w700 : FontWeight.w500)),
-                  ),
-                ],
+              child: Material(
+                type: MaterialType.transparency,
+                child: Column(
+                  children: [
+                    RadioListTile<AppLanguage>(
+                      value: AppLanguage.pt,
+                      groupValue: _selectedLanguage,
+                      onChanged: (value) {
+                        if (value != null) setState(() => _selectedLanguage = value);
+                      },
+                      activeColor: AppColors.brandBlue,
+                      title: Text(s.portuguese, style: TextStyle(fontWeight: _selectedLanguage == AppLanguage.pt ? FontWeight.w700 : FontWeight.w500)),
+                    ),
+                    RadioListTile<AppLanguage>(
+                      value: AppLanguage.en,
+                      groupValue: _selectedLanguage,
+                      onChanged: (value) {
+                        if (value != null) setState(() => _selectedLanguage = value);
+                      },
+                      activeColor: AppColors.brandBlue,
+                      title: Text(s.english, style: TextStyle(fontWeight: _selectedLanguage == AppLanguage.en ? FontWeight.w700 : FontWeight.w500)),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 28),
@@ -202,31 +210,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 14),
             Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(color: AppColors.surfaceWhite, borderRadius: BorderRadius.circular(20)),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.cloud_upload_outlined, color: AppColors.neutralSoft),
-                    title: Text(s.backupTitle),
-                    subtitle: Text(s.backupSubtitle),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: AppColors.taupeSoft, borderRadius: BorderRadius.circular(10)),
-                      child: Text(
-                        s.premium,
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.taupe),
+              child: Material(
+                type: MaterialType.transparency,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.cloud_upload_outlined, color: AppColors.neutralSoft),
+                      title: Text(s.backupTitle),
+                      subtitle: Text(s.backupSubtitle),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: AppColors.taupeSoft, borderRadius: BorderRadius.circular(10)),
+                        child: Text(
+                          s.premium,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.taupe),
+                        ),
                       ),
+                      enabled: false,
                     ),
-                    enabled: false,
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
-                    title: Text(s.resetAppTitle, style: const TextStyle(color: Colors.redAccent)),
-                    subtitle: Text(s.resetAppSubtitle),
-                    onTap: _confirmResetApp,
-                  ),
-                ],
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
+                      title: Text(s.resetAppTitle, style: const TextStyle(color: Colors.redAccent)),
+                      subtitle: Text(s.resetAppSubtitle),
+                      onTap: _confirmResetApp,
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 28),
@@ -236,20 +248,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 14),
             Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(color: AppColors.surfaceWhite, borderRadius: BorderRadius.circular(20)),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.code, color: AppColors.neutralSoft),
-                    title: Text(s.developedBy),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.info_outline, color: AppColors.neutralSoft),
-                    title: Text(s.version),
-                    subtitle: const Text('1.0.0'),
-                  ),
-                ],
+              child: Material(
+                type: MaterialType.transparency,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.code, color: AppColors.neutralSoft),
+                      title: Text(s.developedBy),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.info_outline, color: AppColors.neutralSoft),
+                      title: Text(s.version),
+                      subtitle: const Text('1.0.0'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
