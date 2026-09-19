@@ -840,12 +840,14 @@ class _AddClientScreenState extends State<AddClientScreen> {
                           controller: _nameController,
                           label: s.nameLabel,
                           validator: _validateName,
+                          textCapitalization: TextCapitalization.sentences,
                         ),
                         const SizedBox(height: 14),
                         SchedifyTextField(
                           controller: _serviceTypeController,
                           label: labels.serviceTypeLabel,
                           validator: _validateServiceType,
+                          textCapitalization: TextCapitalization.sentences,
                         ),
                         const SizedBox(height: 14),
                         SchedifyTextField(
@@ -872,6 +874,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
                           controller: _notesController,
                           label: s.notesLabel,
                           maxLines: 4,
+                          textCapitalization: TextCapitalization.sentences,
                         ),
                       ],
                     ),
