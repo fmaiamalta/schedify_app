@@ -5,8 +5,9 @@ import '../services/schedule_logic.dart';
 import '../theme.dart';
 import '../widgets/shared_widgets.dart';
 
-/// Ecrã "Horário": visualização em formato de calendário escolar, mostrando
-/// apenas o nome do aluno/cliente e a disciplina/atividade em cada dia. Cada
+/// Ecrã "Horário": grelha semanal ao estilo de um horário escolar — o eixo de
+/// horas fixo à esquerda, um dia por coluna, e cada aula/sessão desenhada num
+/// bloco posicionado e dimensionado pela hora de início e duração reais. Cada
 /// ocorrência pode ser reagendada ou cancelada individualmente (ver
 /// [OccurrenceOverride]), sem alterar o horário fixo do cliente.
 class ScheduleScreen extends StatefulWidget {
@@ -28,21 +29,49 @@ class ScheduleScreen extends StatefulWidget {
 }
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
-  late DateTime _monthCursor;
+  static const double _pixelsPerMinute = 1.4;
+  static const double _dayColumnWidth = 118;
+  static const double _hourAxisWidth = 46;
+  static const double _dayHeaderHeight = 52;
+  static const int _defaultStartHour = 8;
+  static const int _defaultEndHour = 20;
+  static const int _hourRangePaddingMinutes = 30;
+
+  late DateTime _weekStart; // segunda-feira da semana em vista
   // Cópia local mutável: este ecrã é empurrado como rota separada, por isso
   // um setState no HomeShell não o reconstrói — precisa da sua própria cópia
   // para refletir uma alteração de imediato, propagando-a de volta via
   // widget.onClientUpdated para persistência.
   late List<Client> _clients;
+  final _dayScrollController = ScrollController();
 
   AppStrings get s => AppStrings(widget.language);
 
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _monthCursor = DateTime(now.year, now.month, 1);
+    final today = dateOnly(DateTime.now());
+    _weekStart = addCalendarDays(today, -((today.weekday - 1) % 7));
     _clients = [...widget.clients];
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToTodayIfVisible());
+  }
+
+  @override
+  void dispose() {
+    _dayScrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToTodayIfVisible() {
+    if (!_dayScrollController.hasClients) return;
+    final today = dateOnly(DateTime.now());
+    final offsetDays = today.difference(_weekStart).inDays;
+    if (offsetDays < 0 || offsetDays > 6) return;
+    final target = (offsetDays * _dayColumnWidth).clamp(
+      0.0,
+      _dayScrollController.position.maxScrollExtent,
+    );
+    _dayScrollController.jumpTo(target);
   }
 
   static String _formatDateTime(AppStrings s, DateTime value) {
@@ -54,12 +83,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Map<DateTime, List<PlannedOccurrence>> _occurrencesByDay() {
-    final gridStart = _gridStart();
-    final gridEnd = addCalendarDays(gridStart, 41);
+    final weekEnd = addCalendarDays(_weekStart, 6);
 
     final map = <DateTime, List<PlannedOccurrence>>{};
     for (final client in _clients) {
-      final resolved = generateResolvedOccurrencesInRange(client, rangeStart: gridStart, rangeEnd: gridEnd);
+      final resolved = generateResolvedOccurrencesInRange(client, rangeStart: _weekStart, rangeEnd: weekEnd);
       for (final occurrence in resolved) {
         final key = dateOnly(occurrence.scheduledFor);
         map.putIfAbsent(key, () => []).add(PlannedOccurrence(
@@ -73,7 +101,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       for (final override in client.occurrenceOverrides) {
         if (!override.isCancelled) continue;
         final day = dateOnly(override.originalScheduledFor);
-        if (day.isBefore(gridStart) || day.isAfter(gridEnd)) continue;
+        if (day.isBefore(_weekStart) || day.isAfter(weekEnd)) continue;
         map.putIfAbsent(day, () => []).add(PlannedOccurrence(
               client: client,
               scheduledFor: override.originalScheduledFor,
@@ -88,9 +116,54 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return map;
   }
 
-  DateTime _gridStart() {
-    final first = DateTime(_monthCursor.year, _monthCursor.month, 1);
-    return addCalendarDays(first, -((first.weekday - 1) % 7));
+  /// Intervalo de horas a mostrar na grelha, calculado a partir das
+  /// ocorrências da semana em vista (com margem), ou o intervalo por omissão
+  /// numa semana vazia — cada prestador de serviço pode trabalhar a horas
+  /// muito diferentes, por isso não faz sentido um intervalo fixo.
+  ({int startHour, int endHour}) _visibleHourRange(List<PlannedOccurrence> weekOccurrences) {
+    if (weekOccurrences.isEmpty) {
+      return (startHour: _defaultStartHour, endHour: _defaultEndHour);
+    }
+    var earliestMinutes = 24 * 60;
+    var latestMinutes = 0;
+    for (final occurrence in weekOccurrences) {
+      final start = occurrence.scheduledFor.hour * 60 + occurrence.scheduledFor.minute;
+      final end = start + occurrence.client.sessionDurationMinutes;
+      if (start < earliestMinutes) earliestMinutes = start;
+      if (end > latestMinutes) latestMinutes = end;
+    }
+    final startHour = ((earliestMinutes - _hourRangePaddingMinutes) / 60).floor().clamp(0, 23);
+    final endHour = ((latestMinutes + _hourRangePaddingMinutes) / 60).ceil().clamp(startHour + 1, 24);
+    return (startHour: startHour, endHour: endHour);
+  }
+
+  /// Atribui cada ocorrência de um dia a uma "faixa" (lane), para que
+  /// ocorrências sobrepostas no tempo fiquem lado a lado em vez de uma por
+  /// cima da outra — caso raro (o mesmo prestador normalmente não tem duas
+  /// sessões em simultâneo), mas sem isto ficariam ilegíveis se acontecesse.
+  Map<PlannedOccurrence, int> _assignLanes(List<PlannedOccurrence> dayOccurrences) {
+    final sorted = [...dayOccurrences]..sort((a, b) => a.scheduledFor.compareTo(b.scheduledFor));
+    final laneEndMinutes = <int>[];
+    final lanes = <PlannedOccurrence, int>{};
+    for (final occurrence in sorted) {
+      final start = occurrence.scheduledFor.hour * 60 + occurrence.scheduledFor.minute;
+      final end = start + occurrence.client.sessionDurationMinutes;
+      var assigned = -1;
+      for (var i = 0; i < laneEndMinutes.length; i++) {
+        if (laneEndMinutes[i] <= start) {
+          assigned = i;
+          break;
+        }
+      }
+      if (assigned == -1) {
+        assigned = laneEndMinutes.length;
+        laneEndMinutes.add(end);
+      } else {
+        laneEndMinutes[assigned] = end;
+      }
+      lanes[occurrence] = assigned;
+    }
+    return lanes;
   }
 
   void _applyClientUpdate(Client updated) {
@@ -248,104 +321,104 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  void _showDayBox(DateTime day, List<PlannedOccurrence> occurrences) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildHourAxis(int startHour, int endHour) {
+    return Column(
+      children: [
+        const SizedBox(height: _dayHeaderHeight),
+        for (var hour = startHour; hour < endHour; hour++)
+          SizedBox(
+            height: 60 * _pixelsPerMinute,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Text(
+                '${hour.toString().padLeft(2, '0')}:00',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.neutralSoft),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDayHeader(DateTime day) {
+    final isToday = day == dateOnly(DateTime.now());
+    return SizedBox(
+      height: _dayHeaderHeight,
+      child: Center(
+        child: Container(
+          width: 44,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isToday ? AppColors.brandBlue : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                s.weekdayShort(day.weekday),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isToday ? Colors.white70 : AppColors.neutralSoft,
+                ),
+              ),
+              Text(
+                '${day.day}',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: isToday ? Colors.white : AppColors.neutralDark,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDayColumn(DateTime day, List<PlannedOccurrence> occurrences, int startHour, double totalHeight) {
+    final lanes = _assignLanes(occurrences);
+    final laneCount = lanes.values.isEmpty ? 1 : (lanes.values.reduce((a, b) => a > b ? a : b) + 1);
+    const horizontalPadding = 3.0;
+    final laneWidth = (_dayColumnWidth - horizontalPadding * 2) / laneCount;
+
+    return SizedBox(
+      width: _dayColumnWidth,
+      child: Column(
+        children: [
+          _buildDayHeader(day),
+          SizedBox(
+            height: totalHeight,
+            child: Stack(
               children: [
-                Text(
-                  '${s.weekdayShort(day.weekday)} ${day.day.toString().padLeft(2, '0')}/${day.month.toString().padLeft(2, '0')}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.neutralDark),
-                ),
-                const SizedBox(height: 12),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 280, minWidth: 220),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: occurrences.length,
-                    separatorBuilder: (_, __) => const Divider(height: 16),
-                    itemBuilder: (context, index) {
-                      final occurrence = occurrences[index];
-                      final time = occurrence.scheduledFor;
-                      final cancelled = occurrence.isCancelled;
-                      return InkWell(
-                        onTap: () {
-                          // Fecha o diálogo do dia primeiro: a sua lista é uma
-                          // cópia fixa e pode ficar desatualizada depois de editar.
-                          Navigator.of(context).pop();
-                          _openOccurrenceActions(occurrence);
-                        },
-                        child: Row(
-                          children: [
-                            Text(
-                              '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: cancelled ? AppColors.neutralSoft : AppColors.accentBlue,
-                                decoration: cancelled ? TextDecoration.lineThrough : null,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    occurrence.client.name,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      decoration: cancelled ? TextDecoration.lineThrough : null,
-                                      color: cancelled ? AppColors.neutralSoft : null,
-                                    ),
-                                  ),
-                                  if (occurrence.client.serviceType.trim().isNotEmpty)
-                                    Text(occurrence.client.serviceType, style: const TextStyle(fontSize: 12, color: AppColors.neutralSoft)),
-                                ],
-                              ),
-                            ),
-                            if (cancelled)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: AppColors.surfaceSoft, borderRadius: BorderRadius.circular(10)),
-                                child: Text(
-                                  s.cancelledBadgeLabel(masculine: getLabels(occurrence.client.activityType, widget.language).sessionIsMasculine),
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.neutralMedium),
-                                ),
-                              )
-                            else
-                              const Icon(Icons.chevron_right, size: 18, color: AppColors.neutralSoft),
-                          ],
-                        ),
-                      );
-                    },
+                for (final occurrence in occurrences)
+                  Positioned(
+                    top: (occurrence.scheduledFor.hour * 60 + occurrence.scheduledFor.minute - startHour * 60) * _pixelsPerMinute,
+                    left: horizontalPadding + laneWidth * lanes[occurrence]!,
+                    width: laneWidth,
+                    height: occurrence.client.sessionDurationMinutes * _pixelsPerMinute,
+                    child: _OccurrenceBlock(
+                      occurrence: occurrence,
+                      color: colorForActivityType(occurrence.client.activityType),
+                      onTap: () => _openOccurrenceActions(occurrence),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(s.close)),
-                ),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final occurrencesByDay = _occurrencesByDay();
-    final gridStart = _gridStart();
+    final weekOccurrences = occurrencesByDay.values.expand((list) => list).toList();
+    final hourRange = _visibleHourRange(weekOccurrences);
+    final totalHeight = (hourRange.endHour - hourRange.startHour) * 60 * _pixelsPerMinute;
     final monthNames = s.monthNames;
 
     return Scaffold(
@@ -366,13 +439,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 IconButton(
                   icon: const Icon(Icons.chevron_left),
                   onPressed: () => setState(() {
-                    _monthCursor = DateTime(_monthCursor.year, _monthCursor.month - 1, 1);
+                    _weekStart = addCalendarDays(_weekStart, -7);
                   }),
                 ),
                 SizedBox(
                   width: 180,
                   child: Text(
-                    '${monthNames[_monthCursor.month - 1]} ${_monthCursor.year}',
+                    '${monthNames[_weekStart.month - 1]} ${_weekStart.year}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.neutralDark),
                   ),
@@ -380,68 +453,102 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
                   onPressed: () => setState(() {
-                    _monthCursor = DateTime(_monthCursor.year, _monthCursor.month + 1, 1);
+                    _weekStart = addCalendarDays(_weekStart, 7);
                   }),
                 ),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: s.weekdayShortHeader
-                    .map((d) => Expanded(
-                          child: Text(d, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.neutralSoft, fontWeight: FontWeight.w600)),
-                        ))
-                    .toList(),
-              ),
-            ),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: GridView.builder(
-                  itemCount: 42,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 7),
-                  itemBuilder: (context, index) {
-                    final day = addCalendarDays(gridStart, index);
-                    final inMonth = day.month == _monthCursor.month;
-                    final occurrences = occurrencesByDay[day] ?? [];
-                    final hasOccurrences = occurrences.isNotEmpty;
-
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: hasOccurrences ? () => _showDayBox(day, occurrences) : null,
-                      child: Container(
-                        margin: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: hasOccurrences ? AppColors.brandBlueSoft : Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+              child: SingleChildScrollView(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: _hourAxisWidth,
+                      child: _buildHourAxis(hourRange.startHour, hourRange.endHour),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        controller: _dayScrollController,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '${day.day}',
-                              style: TextStyle(
-                                color: inMonth ? AppColors.neutralDark : AppColors.neutralSoft.withValues(alpha: 0.4),
-                                fontWeight: hasOccurrences ? FontWeight.w800 : FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            if (hasOccurrences)
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: const BoxDecoration(color: AppColors.brandBlue, shape: BoxShape.circle),
+                            for (var i = 0; i < 7; i++)
+                              _buildDayColumn(
+                                addCalendarDays(_weekStart, i),
+                                occurrencesByDay[addCalendarDays(_weekStart, i)] ?? const [],
+                                hourRange.startHour,
+                                totalHeight,
                               ),
                           ],
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OccurrenceBlock extends StatelessWidget {
+  final PlannedOccurrence occurrence;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _OccurrenceBlock({required this.occurrence, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cancelled = occurrence.isCancelled;
+    final client = occurrence.client;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: BoxDecoration(
+            color: cancelled ? Colors.transparent : color.withValues(alpha: 0.16),
+            border: Border.all(color: cancelled ? AppColors.neutralSoft : color, width: cancelled ? 1 : 1.4),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                client.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: cancelled ? AppColors.neutralSoft : AppColors.neutralDark,
+                  decoration: cancelled ? TextDecoration.lineThrough : null,
+                ),
+              ),
+              if (client.serviceType.trim().isNotEmpty)
+                Text(
+                  client.serviceType,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: cancelled ? AppColors.neutralSoft : AppColors.neutralMedium,
+                    decoration: cancelled ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
