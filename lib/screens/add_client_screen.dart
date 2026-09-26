@@ -680,7 +680,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
       name: _capitalizeFirstLetter(_nameController.text.trim()),
       serviceType: _capitalizeFirstLetter(_serviceTypeController.text.trim()),
       contactEmail: _emailController.text.trim(),
-      contactPhone: _phoneController.text.trim(),
+      contactPhone: ensureCountryCode(_phoneController.text.trim()),
       notes: _capitalizeFirstLetter(_notesController.text.trim()),
       sessionDurationMinutes: _sessionDurationMinutes,
       sessionFrequency: _sessionFrequency,
@@ -810,23 +810,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(child: FormSectionTitle(title: s.infoSection(singularLower))),
-                      const SizedBox(width: 8),
-                      TextButton.icon(
-                        onPressed: _importFromContacts,
-                        icon: const Icon(Icons.contact_page_outlined, size: 18),
-                        label: Text(s.importContactAction),
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                    ],
-                  ),
+                  FormSectionTitle(title: s.infoSection(singularLower)),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(18),
@@ -841,6 +825,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
                           label: s.nameLabel,
                           validator: _validateName,
                           textCapitalization: TextCapitalization.sentences,
+                          autofillHints: const [AutofillHints.name],
                         ),
                         const SizedBox(height: 14),
                         SchedifyTextField(
@@ -857,6 +842,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
                           validator: _validateEmail,
                           textCapitalization: TextCapitalization.none,
                           autocorrect: false,
+                          autofillHints: const [AutofillHints.email],
                         ),
                         const SizedBox(height: 14),
                         SchedifyTextField(
@@ -868,6 +854,21 @@ class _AddClientScreenState extends State<AddClientScreen> {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'[\d+]')),
                           ],
+                          autofillHints: const [AutofillHints.telephoneNumber],
+                        ),
+                        const SizedBox(height: 6),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: _importFromContacts,
+                            icon: const Icon(Icons.contact_page_outlined, size: 18),
+                            label: Text(s.importContactAction),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 14),
                         SchedifyTextField(

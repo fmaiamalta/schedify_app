@@ -40,4 +40,24 @@ void main() {
       expect(RegExp(r'^\+?\d+$').hasMatch(result), isTrue);
     });
   });
+
+  group('ensureCountryCode', () {
+    test('adds +351 to a bare 9-digit number with no country code', () {
+      expect(ensureCountryCode('912345678'), '+351912345678');
+    });
+
+    test('leaves a number that already has a leading "+" untouched', () {
+      expect(ensureCountryCode('+44912345678'), '+44912345678');
+    });
+
+    test('leaves a number that is not exactly 9 digits untouched', () {
+      expect(ensureCountryCode('12345678'), '12345678');
+      expect(ensureCountryCode('1234567890'), '1234567890');
+    });
+
+    test('an empty or blank value stays empty', () {
+      expect(ensureCountryCode(''), '');
+      expect(ensureCountryCode('   '), '');
+    });
+  });
 }

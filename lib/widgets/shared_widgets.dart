@@ -450,6 +450,7 @@ class SchedifyTextField extends StatelessWidget {
   final String? helperText;
   final TextCapitalization textCapitalization;
   final bool autocorrect;
+  final Iterable<String>? autofillHints;
 
   const SchedifyTextField({
     super.key,
@@ -465,6 +466,7 @@ class SchedifyTextField extends StatelessWidget {
     this.helperText,
     this.textCapitalization = TextCapitalization.none,
     this.autocorrect = true,
+    this.autofillHints,
   });
 
   @override
@@ -481,6 +483,7 @@ class SchedifyTextField extends StatelessWidget {
       onChanged: onChanged,
       textCapitalization: textCapitalization,
       autocorrect: autocorrect,
+      autofillHints: autofillHints,
       style: const TextStyle(fontSize: 16, color: AppColors.neutralDark),
       decoration: schedifyInputDecoration(label, helperText: helperText),
     );

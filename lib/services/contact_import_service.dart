@@ -14,3 +14,17 @@ String normalizeImportedPhone(String raw) {
   if (digitsOnly.isEmpty) return '';
   return hasLeadingPlus ? '+$digitsOnly' : digitsOnly;
 }
+
+/// Se o telefone escrito à mão não tiver indicativo de país (sem '+') e
+/// tiver exatamente 9 dígitos, assume Portugal (+351) — o mesmo critério já
+/// usado em normalizePhoneForWhatsApp (report_service.dart), aplicado agora
+/// também ao que fica guardado, não só ao enviar por WhatsApp. Sem isto, um
+/// cliente que ignore a dica "inclua o indicativo" fica com um número
+/// tecnicamente incompleto guardado no seu registo.
+String ensureCountryCode(String phone) {
+  final trimmed = phone.trim();
+  if (trimmed.isEmpty || trimmed.startsWith('+')) return trimmed;
+  final digitsOnly = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+  if (digitsOnly.length == 9) return '+351$digitsOnly';
+  return trimmed;
+}
