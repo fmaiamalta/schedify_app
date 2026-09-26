@@ -330,6 +330,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
       selectableDayPredicate: _selectedWeekdays.isEmpty
           ? null
           : (date) => _selectedWeekdays.contains(date.weekday),
+      locale: const Locale('pt', 'PT'),
     );
     if (picked == null) return;
     setState(() {
@@ -346,6 +347,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
       selectableDayPredicate: _selectedWeekdays.isEmpty
           ? null
           : (date) => _selectedWeekdays.contains(date.weekday),
+      locale: const Locale('pt', 'PT'),
     );
     if (picked == null) return;
     setState(() {
@@ -359,6 +361,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
       initialDate: _avulsoDateTime,
       firstDate: DateTime(DateTime.now().year - 2),
       lastDate: DateTime(DateTime.now().year + 5),
+      locale: const Locale('pt', 'PT'),
     );
     if (pickedDate == null || !mounted) return;
 

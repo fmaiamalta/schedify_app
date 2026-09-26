@@ -32,7 +32,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   static const double _pixelsPerMinute = 1.4;
   static const double _dayColumnWidth = 118;
   static const double _hourAxisWidth = 46;
-  static const double _dayHeaderHeight = 52;
+  static const double _dayHeaderHeight = 58;
   static const int _defaultStartHour = 8;
   static const int _defaultEndHour = 20;
   static const int _hourRangePaddingMinutes = 30;
@@ -184,6 +184,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       initialDate: occurrence.scheduledFor,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 5),
+      locale: const Locale('pt', 'PT'),
     );
     if (pickedDate == null || !mounted) return;
 
@@ -347,7 +348,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       child: Center(
         child: Container(
           width: 44,
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: isToday ? AppColors.brandBlue : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
