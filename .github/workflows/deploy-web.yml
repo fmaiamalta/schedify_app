@@ -24,6 +24,21 @@ jobs:
           channel: stable
       - run: flutter pub get
       - run: flutter build web --release --base-href /schedify_app/
+      # Cronograma Letivo (PWA em React), publicado em /schedify_app/cronograma/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cronograma/package-lock.json
+      - run: npm ci
+        working-directory: cronograma
+      - run: npm test
+        working-directory: cronograma
+      - run: npm run build
+        working-directory: cronograma
+        env:
+          CRONOGRAMA_BASE: /schedify_app/cronograma/
+      - run: cp -r cronograma/dist build/web/cronograma
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
