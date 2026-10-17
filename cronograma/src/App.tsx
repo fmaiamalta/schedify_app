@@ -172,6 +172,12 @@ export default function App() {
                 </div>
               )}
             </div>
+            {!estado.calendario.importadoDe && planos.length > 0 && (
+              <div className="banner print-hide" style={{ margin: '0 0 12px' }}>
+                <span>Estás a usar o calendário nacional. Importa o calendário da tua escola para teres os feriados e as datas certas.</span>
+                <button className="btn" onClick={() => setSep('calendario')}>Importar calendário</button>
+              </div>
+            )}
             {planos.length === 0 ? (
               <div className="empty">
                 <p>Ainda não há nada para mostrar. Começa pelo teu horário: turmas, tempos por dia e UC.</p>

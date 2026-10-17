@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { lerCalendario, type SugestaoCalendario } from '../lib/calendarParse';
 import { fmtLong, uid, weekday, DIAS_SEMANA } from '../lib/dates';
-import { textoDoFicheiro } from '../lib/fileText';
+import { lerFicheiro } from '../lib/fileText';
 import { calendario2026 } from '../lib/presets';
 import { linkCalendario } from '../lib/store';
 import type { Ano, CalendarioEscolar, Estado, Feriado, Periodo } from '../lib/types';
@@ -15,7 +15,9 @@ interface Props {
 export function CalendarioView({ estado, atualizar }: Props) {
   const cal = estado.calendario;
   const [aLer, setALer] = useState<string | null>(null);
-  const [sugestao, setSugestao] = useState<(SugestaoCalendario & { escolhidas: Set<string> }) | null>(null);
+  const [sugestao, setSugestao] = useState<
+    (SugestaoCalendario & { escolhidas: Set<string>; ficheiro: string; inicioEscolhido?: string; substituir: boolean }) | null
+  >(null);
   const [copiado, setCopiado] = useState(false);
 
   const setCal = (f: (c: CalendarioEscolar) => CalendarioEscolar) => atualizar((e) => ({ ...e, calendario: f(e.calendario) }));
@@ -31,15 +33,16 @@ export function CalendarioView({ estado, atualizar }: Props) {
   const importar = async (file: File) => {
     setALer('A ler o ficheiro...');
     try {
-      const texto = await textoDoFicheiro(file, setALer);
-      const s = lerCalendario(texto, anoInicial);
+      const { texto, itens } = await lerFicheiro(file, setALer);
+      const s = lerCalendario(texto, anoInicial, itens);
+      const anos = Object.keys(s.fimPorAno);
       const chaves = [
-        ...(s.inicio ? ['inicio'] : []),
+        ...anos.map((a) => `fim:${a}`),
         ...s.interrupcoes.map((i) => `i:${i.inicio}`),
         ...s.feriados.map((f) => `f:${f.data}`),
       ];
-      if (!chaves.length) alert('Não encontrei datas neste ficheiro. Podes introduzi-las à mão.');
-      else setSugestao({ ...s, escolhidas: new Set(chaves) });
+      if (!chaves.length && !s.inicio) alert('Não encontrei datas neste ficheiro. Podes introduzi-las à mão.');
+      else setSugestao({ ...s, escolhidas: new Set(chaves), ficheiro: file.name, inicioEscolhido: s.inicio, substituir: true });
     } catch (err) {
       alert(`Não consegui ler o ficheiro: ${(err as Error).message}`);
     } finally {
@@ -50,17 +53,24 @@ export function CalendarioView({ estado, atualizar }: Props) {
   const aplicar = () => {
     if (!sugestao) return;
     const e = sugestao.escolhidas;
+    const novasInt = sugestao.interrupcoes.filter((n) => e.has(`i:${n.inicio}`)).map((n) => ({ id: uid(), ...n }));
+    const novosFer = sugestao.feriados.filter((n) => e.has(`f:${n.data}`)).map((n) => ({ id: uid(), ...n }));
+    const fimPorAno = { ...cal.fimPorAno };
+    for (const [ano, data] of Object.entries(sugestao.fimPorAno)) if (e.has(`fim:${ano}`) && data) fimPorAno[Number(ano) as Ano] = data;
     setCal((c) => ({
       ...c,
-      inicio: e.has('inicio') && sugestao.inicio ? sugestao.inicio : c.inicio,
-      interrupcoes: [
-        ...c.interrupcoes.filter((i) => !sugestao.interrupcoes.some((n) => e.has(`i:${n.inicio}`) && n.nome === i.nome)),
-        ...sugestao.interrupcoes.filter((n) => e.has(`i:${n.inicio}`)).map((n) => ({ id: uid(), ...n })),
-      ].sort((a, b) => a.inicio.localeCompare(b.inicio)),
-      feriados: [
-        ...c.feriados.filter((f) => !sugestao.feriados.some((n) => e.has(`f:${n.data}`) && n.data === f.data)),
-        ...sugestao.feriados.filter((n) => e.has(`f:${n.data}`)).map((n) => ({ id: uid(), ...n })),
-      ].sort((a, b) => a.data.localeCompare(b.data)),
+      inicio: sugestao.inicioEscolhido ?? c.inicio,
+      fimPorAno,
+      importadoDe: sugestao.ficheiro,
+      // O calendário é de cada escola: por defeito o ficheiro substitui o que lá estava.
+      interrupcoes: (sugestao.substituir
+        ? novasInt
+        : [...c.interrupcoes.filter((i) => !novasInt.some((n) => n.nome === i.nome)), ...novasInt]
+      ).sort((a, b) => a.inicio.localeCompare(b.inicio)),
+      feriados: (sugestao.substituir
+        ? novosFer
+        : [...c.feriados.filter((f) => !novosFer.some((n) => n.data === f.data)), ...novosFer]
+      ).sort((a, b) => a.data.localeCompare(b.data)),
     }));
     setSugestao(null);
   };
@@ -93,7 +103,10 @@ export function CalendarioView({ estado, atualizar }: Props) {
       <div className="page-head">
         <div>
           <h1>Calendário escolar</h1>
-          <p className="muted">É igual para todos os professores da escola. Uma pessoa preenche e partilha o link com os colegas.</p>
+          <p className="muted">
+            Cada escola tem o seu. Importa o PDF do calendário da tua escola e confirma as datas. Depois partilha o link com os colegas, que
+            ficam com o mesmo calendário sem o preencher.
+          </p>
         </div>
         <div className="row wrap">
           <label className="btn">
@@ -105,14 +118,46 @@ export function CalendarioView({ estado, atualizar }: Props) {
         </div>
       </div>
 
+      {!cal.importadoDe && !sugestao && (
+        <section className="card plain highlight">
+          <strong>Estás a ver o calendário nacional 2026/2027.</strong>
+          <p className="muted small">Importa o calendário da tua escola (PDF, Word ou fotografia) para teres o início, o fim e os feriados certos.</p>
+        </section>
+      )}
+      {cal.importadoDe && !sugestao && <p className="muted small">Importado de: {cal.importadoDe}</p>}
+
       {sugestao && (
         <section className="card plain highlight">
           <h2>Datas encontradas no ficheiro</h2>
           <p className="muted small">Confirma o que está certo. Só as datas marcadas são gravadas.</p>
+          {(sugestao.inicios.length > 1 || sugestao.inicio) && (
+            <fieldset>
+              <legend>Início das aulas</legend>
+              {sugestao.inicios.length > 1 && <p className="muted small">O ficheiro tem mais do que um início. Escolhe o dos cursos profissionais.</p>}
+              <ul className="check-list">
+                {(sugestao.inicios.length ? sugestao.inicios : [{ data: sugestao.inicio!, nota: '' }]).map((x) => (
+                  <li key={x.data}>
+                    <label>
+                      <input type="radio" name="inicio" checked={sugestao.inicioEscolhido === x.data}
+                        onChange={() => setSugestao((s) => s && { ...s, inicioEscolhido: x.data })} />
+                      {fmtLong(x.data)} ({DIAS_SEMANA[weekday(x.data)]}){x.nota ? ` · ${x.nota}` : ''}
+                    </label>
+                  </li>
+                ))}
+                <li>
+                  <label>
+                    <input type="radio" name="inicio" checked={sugestao.inicioEscolhido === undefined}
+                      onChange={() => setSugestao((s) => s && { ...s, inicioEscolhido: undefined })} />
+                    Manter {fmtLong(cal.inicio)}
+                  </label>
+                </li>
+              </ul>
+            </fieldset>
+          )}
           <ul className="check-list">
-            {sugestao.inicio && (
-              <li><label><input type="checkbox" checked={sugestao.escolhidas.has('inicio')} onChange={() => alternar('inicio')} /> Início das aulas: {fmtLong(sugestao.inicio)}</label></li>
-            )}
+            {([10, 11, 12] as Ano[]).filter((a) => sugestao.fimPorAno[a]).map((a) => (
+              <li key={a}><label><input type="checkbox" checked={sugestao.escolhidas.has(`fim:${a}`)} onChange={() => alternar(`fim:${a}`)} /> Fim das aulas do {a}.º ano: {fmtLong(sugestao.fimPorAno[a]!)}</label></li>
+            ))}
             {sugestao.interrupcoes.map((i) => (
               <li key={i.inicio}><label><input type="checkbox" checked={sugestao.escolhidas.has(`i:${i.inicio}`)} onChange={() => alternar(`i:${i.inicio}`)} /> Interrupção {i.nome}: {fmtLong(i.inicio)} a {fmtLong(i.fim)}</label></li>
             ))}
@@ -120,7 +165,11 @@ export function CalendarioView({ estado, atualizar }: Props) {
               <li key={f.data}><label><input type="checkbox" checked={sugestao.escolhidas.has(`f:${f.data}`)} onChange={() => alternar(`f:${f.data}`)} /> {f.nome}: {fmtLong(f.data)}</label></li>
             ))}
           </ul>
-          <div className="row">
+          <label className="toggle">
+            <input type="checkbox" checked={sugestao.substituir} onChange={(e) => setSugestao((s) => s && { ...s, substituir: e.target.checked })} />
+            Substituir todas as interrupções e feriados atuais pelos do ficheiro
+          </label>
+          <div className="row" style={{ marginTop: 12 }}>
             <button className="btn primary" onClick={aplicar}>Gravar as marcadas</button>
             <button className="btn" onClick={() => setSugestao(null)}>Cancelar</button>
           </div>

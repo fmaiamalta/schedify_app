@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { juntarCatalogo, lerCatalogoCSV, lerReferencial, normalizarCodigo, pesquisarCatalogo } from '../lib/catalog';
 import { horasParaTempos } from '../lib/engine';
-import { textoDoFicheiro } from '../lib/fileText';
+import { lerFicheiro } from '../lib/fileText';
 import { CATALOGO_BASE } from '../lib/presets';
 import { COMPONENTES, type Componente, type EntradaCatalogo, type Estado } from '../lib/types';
 import { IconTrash } from './icons';
@@ -22,7 +22,7 @@ export function CatalogoView({ estado, atualizar }: Props) {
   const importar = async (file: File) => {
     setALer('A ler o ficheiro...');
     try {
-      const texto = await textoDoFicheiro(file, setALer);
+      const { texto } = await lerFicheiro(file, setALer);
       const nome = file.name.toLowerCase();
       let r = nome.endsWith('.csv') ? lerCatalogoCSV(texto) : lerReferencial(texto);
       if (!r.length) r = lerCatalogoCSV(texto);
@@ -53,7 +53,7 @@ export function CatalogoView({ estado, atualizar }: Props) {
           <h1>Catálogo de UC</h1>
           <p className="muted">
             {estado.catalogo.length} entradas. Vem com o referencial de Técnico/a de Multimédia. Para outro curso, importa o referencial
-            do Catálogo Nacional de Qualificações (PDF ou DOCX).
+            desse curso (Word ou PDF).
           </p>
         </div>
         <label className="btn primary">

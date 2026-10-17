@@ -17,8 +17,12 @@ Depois do deploy fica em `https://fmaiamalta.github.io/schedify_app/cronograma/`
   referencial de Técnico/a de Multimédia e importa outros referenciais em PDF,
   DOCX ou CSV (`código;nome;horas`). As horas das UC vêm dos pontos de crédito:
   2,25 pontos = 25 h = 30 tempos de 50 min.
-- Calendário escolar 2026/2027 já preenchido. Importa datas de um PDF ou imagem
-  e partilha-se com os colegas por link (`#cal=...`).
+- Calendário escolar da escola: importa o PDF (grelha mensal com legenda, como
+  os feitos em Word), um DOCX ou uma fotografia. Lê interrupções, feriados
+  (incluindo o municipal), inícios por nível de ensino e o fim das aulas por
+  ano. Ignora dias comemorativos (Dia da Mãe, S. Valentim). Antes de importar,
+  a app usa o calendário nacional 2026/2027. Partilha-se com os colegas por
+  link (`#cal=...`).
 - Os dados ficam no dispositivo (localStorage). Exportar e importar cópia em JSON.
 
 ## Desenvolvimento

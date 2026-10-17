@@ -1,36 +1,40 @@
 // Extrai texto de PDF, DOCX, imagem (OCR) ou ficheiro de texto. As bibliotecas
 // pesadas só são carregadas quando são precisas.
 
-export async function textoDoFicheiro(file: File, progresso?: (msg: string) => void): Promise<string> {
-  const nome = file.name.toLowerCase();
-  if (file.type === 'application/pdf' || nome.endsWith('.pdf')) return textoDePDF(file);
-  if (nome.endsWith('.docx')) return textoDeDOCX(file);
-  if (file.type.startsWith('image/')) return textoDeImagem(file, progresso);
-  return file.text();
+import type { ItemPDF } from './pdfLayout';
+import { textoDeItens } from './pdfLayout';
+
+export interface ConteudoFicheiro {
+  texto: string;
+  /** Só para PDF: os pedaços de texto com posição, para ler tabelas e grelhas. */
+  itens?: ItemPDF[];
 }
 
-async function textoDePDF(file: File): Promise<string> {
+export async function lerFicheiro(file: File, progresso?: (msg: string) => void): Promise<ConteudoFicheiro> {
+  const nome = file.name.toLowerCase();
+  if (file.type === 'application/pdf' || nome.endsWith('.pdf')) {
+    const itens = await itensDePDF(file);
+    return { texto: textoDeItens(itens), itens };
+  }
+  if (nome.endsWith('.docx')) return { texto: await textoDeDOCX(file) };
+  if (file.type.startsWith('image/')) return { texto: await textoDeImagem(file, progresso) };
+  return { texto: await file.text() };
+}
+
+async function itensDePDF(file: File): Promise<ItemPDF[]> {
   const pdfjs = await import('pdfjs-dist');
   const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
   const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
-  const paginas: string[] = [];
+  const itens: ItemPDF[] = [];
   for (let p = 1; p <= doc.numPages; p++) {
-    const page = await doc.getPage(p);
-    const content = await page.getTextContent();
-    // Agrupa os pedaços de texto por linha (mesma coordenada y).
-    const linhas = new Map<number, { x: number; s: string }[]>();
+    const content = await (await doc.getPage(p)).getTextContent();
     for (const item of content.items) {
       if (!('str' in item) || !item.str.trim()) continue;
-      const y = Math.round(item.transform[5]);
-      const chave = [...linhas.keys()].find((k) => Math.abs(k - y) <= 2) ?? y;
-      if (!linhas.has(chave)) linhas.set(chave, []);
-      linhas.get(chave)!.push({ x: item.transform[4], s: item.str });
+      itens.push({ x: item.transform[4], y: item.transform[5], w: item.width, s: item.str, p });
     }
-    const ordenadas = [...linhas.entries()].sort((a, b) => b[0] - a[0]);
-    paginas.push(ordenadas.map(([, partes]) => partes.sort((a, b) => a.x - b.x).map((p) => p.s).join(' ')).join('\n'));
   }
-  return paginas.join('\n');
+  return itens;
 }
 
 async function textoDeDOCX(file: File): Promise<string> {

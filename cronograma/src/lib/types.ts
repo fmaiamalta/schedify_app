@@ -34,6 +34,8 @@ export interface CalendarioEscolar {
   feriados: Feriado[];
   /** Duração de um tempo letivo, em minutos. */
   minutosPorTempo: number;
+  /** Nome do ficheiro de onde veio, se foi importado. */
+  importadoDe?: string;
 }
 
 export interface EntradaCatalogo {

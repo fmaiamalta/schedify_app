@@ -146,13 +146,13 @@ h3 { font-size: 0.95rem; margin: 18px 0 6px; }
 .icon-btn:disabled { opacity: 0.3; cursor: default; }
 .link-btn { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 6px 0; text-align: left; }
 
-input:not([type='checkbox']):not([type='color']), select {
+input:not([type='checkbox']):not([type='radio']):not([type='color']), select {
   width: 100%; min-height: 38px; padding: 7px 10px; border-radius: 8px;
   border: 1px solid var(--border); background: var(--surface);
 }
 input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 input[type='color'] { width: 100%; height: 38px; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
-input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+input[type='checkbox'], input[type='radio'] { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
 select { width: auto; }
 label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
 label > input, label > select { color: var(--text); font-size: 0.95rem; }
